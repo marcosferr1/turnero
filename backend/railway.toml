@@ -1,8 +1,11 @@
-# Usar este archivo si en Railway → Settings → Root Directory = backend
+# Railway → Settings:
+#   Root Directory = backend
+#   Config file    = /backend/railway.toml
+#   Watch paths    = /backend/**
 
 [build]
 builder = "RAILPACK"
-buildCommand = "npm ci && npx prisma generate && npm run build"
+buildCommand = "npm ci && npm run build"
 
 [deploy]
 startCommand = "npx prisma migrate deploy && npm start"
