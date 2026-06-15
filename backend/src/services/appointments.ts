@@ -22,6 +22,11 @@ async function getFull(id: number): Promise<FullAppointment> {
   return a;
 }
 
+/** WhatsApp puede tardar (humanize 2–4 s); no bloquear la respuesta del panel. */
+function notifyInBackground(label: string, fn: () => Promise<void>): void {
+  void fn().catch((err) => console.error(`[notifications] Error al enviar ${label}:`, err));
+}
+
 export async function approve(id: number): Promise<FullAppointment> {
   const a = await getFull(id);
   if (a.status !== "PENDIENTE") throw new AppError(400, "El turno no está pendiente");
@@ -30,7 +35,7 @@ export async function approve(id: number): Promise<FullAppointment> {
     data: { status: "CONFIRMADO" },
     include: FULL_INCLUDE,
   });
-  await notifyConfirmado(updated);
+  notifyInBackground("confirmación", () => notifyConfirmado(updated));
   return updated;
 }
 
@@ -42,7 +47,7 @@ export async function reject(id: number): Promise<FullAppointment> {
     data: { status: "RECHAZADO" },
     include: FULL_INCLUDE,
   });
-  await notifyRechazado(updated);
+  notifyInBackground("rechazo", () => notifyRechazado(updated));
   return updated;
 }
 
@@ -55,7 +60,7 @@ export async function cancelByDoctor(id: number): Promise<FullAppointment> {
     data: { status: "CANCELADO_DOCTOR" },
     include: FULL_INCLUDE,
   });
-  await notifyCanceladoPorDoctor(updated);
+  notifyInBackground("cancelación", () => notifyCanceladoPorDoctor(updated));
   return updated;
 }
 
@@ -78,7 +83,7 @@ export async function reschedule(
     data: { date, time, locationId: targetLocation, reminderSentAt: null },
     include: FULL_INCLUDE,
   });
-  await notifyReprogramado(updated, a.date, a.time);
+  notifyInBackground("reprogramación", () => notifyReprogramado(updated, a.date, a.time));
   return updated;
 }
 
