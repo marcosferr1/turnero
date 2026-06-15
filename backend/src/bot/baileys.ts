@@ -17,7 +17,7 @@ import makeWASocket, {
 import { Boom } from "@hapi/boom";
 import { config } from "../config";
 import { logQrForCloud } from "../lib/qrTerminal";
-import { baileysQrPairingUrl } from "../lib/baileysPairingUrl";
+import { logBaileysQrHint, resetBaileysQrLogThrottle } from "../lib/baileysPairingUrl";
 import { normalizeWhatsAppPhone } from "../lib/phoneNormalize";
 import { resolvePendingChoice } from "./pendingChoices";
 import { handlePatientMessage, resolveDoctorForBaileys } from "./dispatch";
@@ -381,9 +381,8 @@ async function connect(): Promise<void> {
         console.error("[baileys] QR generado pero BAILEYS_QR_SECRET no está configurado; /baileys/qr deshabilitado.");
         return;
       }
-      const url = baileysQrPairingUrl();
-      if (url) {
-        console.log(`[baileys] Escaneá el QR en: ${url}`);
+      if (config.publicUrl) {
+        logBaileysQrHint();
       } else {
         logQrForCloud(qr, "[baileys] Escaneá este QR con WhatsApp → Dispositivos vinculados:");
       }
@@ -393,6 +392,7 @@ async function connect(): Promise<void> {
       starting = false;
       pendingQr = null;
       baileysConnected = true;
+      resetBaileysQrLogThrottle();
       console.log(`[baileys] Conectado (+${config.baileys.phone}). Listo para recibir mensajes.`);
     }
 
@@ -415,6 +415,7 @@ async function connect(): Promise<void> {
       } else {
         console.warn(`[baileys] Conexión cerrada (código ${code ?? "?"}). Reconectando en 5 s…`);
       }
+      resetBaileysQrLogThrottle();
       setTimeout(() => {
         connect().catch((err) => console.error("[baileys] Error reconectando:", err));
       }, 5000);
