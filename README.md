@@ -94,3 +94,4 @@ docs/
 3. 24 hs antes del turno confirmado se envía un **recordatorio** automático.
 4. Si el consultorio cancela o reprograma, el paciente recibe el aviso correspondiente.
 5. El paciente puede cancelar su turno desde el bot ("Mis turnos") y el horario se libera.
+# turnero
