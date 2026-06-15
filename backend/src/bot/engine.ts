@@ -29,6 +29,7 @@ interface ConvData {
   insurance?: string;
   email?: string;
   motivo?: string;
+  patientAddress?: string;
   cancelApptId?: number;
 }
 
@@ -106,6 +107,9 @@ export async function handleIncoming(msg: IncomingMessage): Promise<void> {
         break;
       case "ASK_MOTIVO":
         await handleAskMotivo(data, text);
+        break;
+      case "ASK_PATIENT_ADDRESS":
+        await handleAskPatientAddress(data, text);
         break;
       case "CONFIRM_BOOKING":
         await handleConfirmBooking(data, optionId);
@@ -236,7 +240,9 @@ async function showLocations(): Promise<void> {
   const locLines = doctor.locations.map((loc) => {
     const days = [...new Set(loc.schedules.map((s) => s.weekday))].sort();
     const dayNames = days.map((d) => WEEKDAYS[d]).join(", ");
-    let block = `*${loc.name}*\n${loc.address}`;
+    let block = loc.isHomeVisit
+      ? `*${loc.name}*\nAtención en el domicilio del paciente`
+      : `*${loc.name}*\n${loc.address}`;
     if (dayNames) block += `\nDías de atención: ${dayNames}`;
     if (loc.notes) block += `\n${loc.notes}`;
     return block;
@@ -276,7 +282,7 @@ async function startLocationSelection(mode: "avail" | "book"): Promise<void> {
     locations.map((l) => ({
       id: `loc_${l.id}`,
       title: l.name.slice(0, 24),
-      description: l.address.slice(0, 72),
+      description: (l.isHomeVisit ? "Visita a tu domicilio" : l.address).slice(0, 72),
     }))
   );
 }
@@ -462,25 +468,60 @@ async function handleAskEmail(data: ConvData, text: string): Promise<void> {
 }
 
 async function handleAskMotivo(data: ConvData, text: string): Promise<void> {
-  const { doctorId, doctorName } = getBotContext();
   if (text.length < 2) {
     await sendText("Contanos brevemente el motivo de la consulta, por favor.");
     return;
   }
-  const next = { ...data, motivo: text };
+  await proceedAfterMotivo({ ...data, motivo: text });
+}
+
+async function handleAskPatientAddress(data: ConvData, text: string): Promise<void> {
+  if (text.length < 8) {
+    await sendText("Necesitamos una dirección más completa (calle, número, piso/depto y localidad).");
+    return;
+  }
+  await showBookingConfirmation({ ...data, patientAddress: text.trim() });
+}
+
+async function proceedAfterMotivo(data: ConvData): Promise<void> {
+  const { doctorId } = getBotContext();
   const location = await prisma.location.findFirst({
-    where: { id: next.locationId!, doctorId },
+    where: { id: data.locationId!, doctorId },
   });
-  await setState("CONFIRM_BOOKING", next);
+  if (location?.isHomeVisit) {
+    await setState("ASK_PATIENT_ADDRESS", data);
+    await sendText(
+      "Indicanos la *dirección completa* donde querés la visita\n" +
+        "(calle, número, piso/depto y localidad):"
+    );
+    return;
+  }
+  await showBookingConfirmation(data);
+}
+
+async function showBookingConfirmation(data: ConvData): Promise<void> {
+  const { doctorId, doctorName } = getBotContext();
+  const location = await prisma.location.findFirst({
+    where: { id: data.locationId!, doctorId },
+  });
+  await setState("CONFIRM_BOOKING", data);
+
+  let placeBlock: string;
+  if (location?.isHomeVisit) {
+    placeBlock = `Modalidad: Visita a domicilio\nDirección: ${data.patientAddress}\n`;
+  } else {
+    placeBlock = `Lugar: ${location?.name}${location?.address ? ` (${location.address})` : ""}\n`;
+  }
+
   await sendButtons(
     `Revisá los datos de tu solicitud:\n\n` +
       `Profesional: ${doctorName}\n` +
-      `Lugar: ${location?.name}\n` +
-      `Fecha: ${formatDateHuman(next.date!)} a las ${next.time} hs\n\n` +
-      `Paciente: ${next.fullName} — DNI ${next.dni}\n` +
-      `Obra social: ${next.insurance}\n` +
-      (next.email ? `Email: ${next.email}\n` : "") +
-      `Motivo: ${next.motivo}\n\n¿Confirmás la solicitud?`,
+      placeBlock +
+      `Fecha: ${formatDateHuman(data.date!)} a las ${data.time} hs\n\n` +
+      `Paciente: ${data.fullName} — DNI ${data.dni}\n` +
+      `Obra social: ${data.insurance}\n` +
+      (data.email ? `Email: ${data.email}\n` : "") +
+      `Motivo: ${data.motivo}\n\n¿Confirmás la solicitud?`,
     [
       { id: "confirm_yes", title: "Confirmar" },
       { id: "confirm_no", title: "Cancelar" },
@@ -529,6 +570,7 @@ async function handleConfirmBooking(data: ConvData, optionId?: string): Promise<
   });
 
   const durationMinutes = await getSlotMinutes(doctorId, data.locationId!);
+  const location = await prisma.location.findFirst({ where: { id: data.locationId!, doctorId } });
   const appointment = await prisma.appointment.create({
     data: {
       doctorId,
@@ -538,6 +580,7 @@ async function handleConfirmBooking(data: ConvData, optionId?: string): Promise<
       time: data.time!,
       durationMinutes,
       motivo: data.motivo,
+      patientAddress: location?.isHomeVisit ? data.patientAddress || null : null,
       status: "PENDIENTE",
       createdVia: "bot",
     },
@@ -575,7 +618,10 @@ async function startMyAppts(): Promise<void> {
 
   const lines = appointments.map((a) => {
     const status = a.status === "PENDIENTE" ? "pendiente de confirmación" : "confirmado";
-    return `• ${formatDateHuman(a.date)} ${a.time} hs — ${a.location.name} (${status})`;
+    const place = a.location.isHomeVisit
+      ? `a domicilio${a.patientAddress ? ` (${a.patientAddress})` : ""}`
+      : a.location.name;
+    return `• ${formatDateHuman(a.date)} ${a.time} hs — ${place} (${status})`;
   });
   await sendText(`Tus próximos turnos con *${appointments[0].doctor.name}*:\n\n${lines.join("\n")}`);
 

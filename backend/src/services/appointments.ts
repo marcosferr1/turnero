@@ -102,10 +102,19 @@ export interface ManualAppointmentInput {
   dni?: string;
   insurance?: string;
   motivo?: string;
+  patientAddress?: string;
 }
 
 /** Alta manual desde el panel: queda confirmado directamente. */
 export async function createManual(input: ManualAppointmentInput): Promise<FullAppointment> {
+  const location = await prisma.location.findUnique({ where: { id: input.locationId } });
+  if (!location || location.doctorId !== input.doctorId) {
+    throw new AppError(400, "La sede no pertenece a este profesional");
+  }
+  if (location.isHomeVisit && !input.patientAddress?.trim()) {
+    throw new AppError(400, "La dirección del paciente es requerida para turnos a domicilio");
+  }
+
   const free = await getSlotsForDate(input.doctorId, input.locationId, input.date);
   if (!free.includes(input.time)) throw new AppError(400, "El horario elegido no está disponible");
 
@@ -134,6 +143,7 @@ export async function createManual(input: ManualAppointmentInput): Promise<FullA
       time: input.time,
       durationMinutes,
       motivo: input.motivo,
+      patientAddress: location.isHomeVisit ? input.patientAddress?.trim() || null : null,
       status: "CONFIRMADO",
       createdVia: "panel",
     },

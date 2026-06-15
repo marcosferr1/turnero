@@ -56,7 +56,7 @@ function Sedes() {
   const [items, setItems] = useState<Location[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ name: '', address: '', notes: '', doctorId: 0 })
+  const [form, setForm] = useState({ name: '', address: '', notes: '', doctorId: 0, isHomeVisit: false })
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
@@ -76,7 +76,7 @@ function Sedes() {
     setError('')
     try {
       await api.post('/api/locations', form)
-      setForm((f) => ({ ...f, name: '', address: '', notes: '' }))
+      setForm((f) => ({ ...f, name: '', address: '', notes: '', isHomeVisit: false }))
       load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error')
@@ -99,9 +99,10 @@ function Sedes() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Profesional</TableHead>
                 <TableHead>Dirección</TableHead>
-                <TableHead>Notas</TableHead>
+                <TableHead>Indicaciones</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead />
               </TableRow>
@@ -110,8 +111,9 @@ function Sedes() {
               {items.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="font-semibold">{l.name}</TableCell>
+                  <TableCell>{l.isHomeVisit ? 'A domicilio' : 'Consultorio'}</TableCell>
                   <TableCell>{l.doctor?.name || '—'}</TableCell>
-                  <TableCell>{l.address}</TableCell>
+                  <TableCell>{l.isHomeVisit ? 'Visita al paciente' : l.address}</TableCell>
                   <TableCell className="max-w-44 truncate">{l.notes || '—'}</TableCell>
                   <TableCell>
                     <ActiveBadge active={l.active} />
@@ -131,6 +133,29 @@ function Sedes() {
           </Table>
         </TableScroll>
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2 sm:col-span-2 lg:col-span-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={form.isHomeVisit}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    isHomeVisit: e.target.checked,
+                    name: e.target.checked && !form.name ? 'A domicilio' : form.name,
+                  })
+                }
+                className="size-4 rounded border-input"
+              />
+              Atención a domicilio — la profesional visita al paciente en su casa
+            </label>
+            {form.isHomeVisit && (
+              <p className="text-sm text-muted-foreground">
+                La dirección del paciente se pide al reservar el turno (WhatsApp o panel). Acá solo
+                se configura la modalidad y la zona donde atiende a domicilio.
+              </p>
+            )}
+          </div>
           <div className="grid gap-2">
             <Label>Profesional</Label>
             <Select value={String(form.doctorId)} onValueChange={(v) => setForm({ ...form, doctorId: Number(v) })}>
@@ -147,19 +172,43 @@ function Sedes() {
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label>Nombre</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Label>{form.isHomeVisit ? 'Nombre (opcional)' : 'Nombre'}</Label>
+            <Input
+              value={form.name}
+              placeholder={form.isHomeVisit ? 'A domicilio' : 'Consultorio Centro…'}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
           </div>
           <div className="grid gap-2">
-            <Label>Dirección</Label>
-            <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <Label>{form.isHomeVisit ? 'Zona de cobertura (opcional)' : 'Dirección'}</Label>
+            <Input
+              value={form.address}
+              placeholder={form.isHomeVisit ? 'Ej. Córdoba capital y alrededores' : 'Calle 123, Ciudad'}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
           </div>
           <div className="grid gap-2">
-            <Label>Notas (opcional)</Label>
-            <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <Label>
+              {form.isHomeVisit
+                ? 'Indicaciones para visitas a domicilio (opcional)'
+                : 'Indicaciones del consultorio (opcional)'}
+            </Label>
+            <Input
+              value={form.notes}
+              placeholder={
+                form.isHomeVisit
+                  ? 'Ej. Solo por la mañana, consultas para movilidad reducida…'
+                  : 'Piso, timbre, cómo llegar…'
+              }
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
           </div>
         </div>
-        <Button className="mt-4" onClick={add} disabled={!form.name || !form.address || !form.doctorId}>
+        <Button
+          className="mt-4"
+          onClick={add}
+          disabled={!form.doctorId || (!form.isHomeVisit && (!form.name || !form.address))}
+        >
           <Plus className="size-4" />
           Agregar sede
         </Button>

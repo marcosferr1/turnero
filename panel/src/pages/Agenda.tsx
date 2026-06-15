@@ -126,7 +126,9 @@ export default function Agenda() {
                     >
                       <div className="text-[13px] font-bold">{a.time} hs</div>
                       <div className="truncate">{a.patient.fullName || a.patient.phone}</div>
-                      <div className="truncate text-muted-foreground">{a.location.name}</div>
+                      <div className="truncate text-muted-foreground">
+                        {a.location.isHomeVisit ? 'A domicilio' : a.location.name}
+                      </div>
                       {!isDoctor && <div className="truncate text-muted-foreground">{a.doctor.name}</div>}
                     </button>
                   ))}
@@ -200,7 +202,15 @@ function DetailModal({
     ['Obra social', a.patient.insurance || '—'],
     ['Motivo', a.motivo || '—'],
     ['Profesional', a.doctor.name],
-    ['Sede', `${a.location.name} — ${a.location.address}`],
+    [
+      a.location.isHomeVisit ? 'Modalidad' : 'Sede',
+      a.location.isHomeVisit
+        ? 'Visita a domicilio'
+        : `${a.location.name} — ${a.location.address}`,
+    ],
+    ...(a.location.isHomeVisit
+      ? ([['Dirección del paciente', a.patientAddress || '—']] as [string, string][])
+      : []),
     ['Origen', a.createdVia === 'bot' ? 'WhatsApp' : 'Panel'],
   ]
 
@@ -338,11 +348,14 @@ function NewAppointmentModal({
     dni: '',
     insurance: '',
     motivo: '',
+    patientAddress: '',
   })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   const doctorLocations = locations.filter((l) => l.active && l.doctorId === form.doctorId)
+  const selectedLocation = doctorLocations.find((l) => l.id === form.locationId)
+  const isHomeVisit = Boolean(selectedLocation?.isHomeVisit)
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     const resetsTime = key === 'date' || key === 'doctorId' || key === 'locationId'
@@ -351,7 +364,9 @@ function NewAppointmentModal({
       if (key === 'doctorId') {
         next.locationId =
           locations.find((l) => l.active && l.doctorId === (value as number))?.id || 0
+        next.patientAddress = ''
       }
+      if (key === 'locationId') next.patientAddress = ''
       return next
     })
   }
@@ -405,6 +420,7 @@ function NewAppointmentModal({
                 {doctorLocations.map((l) => (
                   <SelectItem key={l.id} value={String(l.id)}>
                     {l.name}
+                    {l.isHomeVisit ? ' (domicilio)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -445,13 +461,32 @@ function NewAppointmentModal({
             <Label>Motivo</Label>
             <Input value={form.motivo} onChange={(e) => set('motivo', e.target.value)} />
           </div>
+          {isHomeVisit && (
+            <div className="col-span-2 grid gap-2">
+              <Label>Dirección del paciente</Label>
+              <Input
+                value={form.patientAddress}
+                placeholder="Calle, número, piso/depto, localidad…"
+                onChange={(e) => set('patientAddress', e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button disabled={busy || !form.time || !form.phone || !form.fullName} onClick={submit}>
+          <Button
+            disabled={
+              busy ||
+              !form.time ||
+              !form.phone ||
+              !form.fullName ||
+              (isHomeVisit && !form.patientAddress.trim())
+            }
+            onClick={submit}
+          >
             Crear turno confirmado
           </Button>
         </DialogFooter>

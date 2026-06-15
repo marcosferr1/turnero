@@ -66,13 +66,15 @@ model Doctor {
 
 /// Sede propia de un doctor.
 model Location {
-  id        Int      @id @default(autoincrement())
-  doctorId  Int
-  name      String
-  address   String
-  notes     String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  doctorId    Int
+  name        String
+  address     String
+  notes       String?
+  /// Si true, el paciente indica su domicilio al reservar (visita a domicilio).
+  isHomeVisit Boolean  @default(false)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
   doctor       Doctor           @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   schedules    DoctorSchedule[]
@@ -134,6 +136,8 @@ model Appointment {
   durationMinutes Int               @default(30)
   status          AppointmentStatus @default(PENDIENTE)
   motivo          String?
+  /// Dirección del paciente cuando la sede es visita a domicilio.
+  patientAddress  String?
   createdVia      String            @default("bot") // bot | panel
   reminderSentAt  DateTime?
   createdAt       DateTime          @default(now())

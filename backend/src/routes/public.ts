@@ -28,6 +28,7 @@ publicRouter.get("/doctors/:id", async (req, res) => {
           name: true,
           address: true,
           notes: true,
+          isHomeVisit: true,
           schedules: {
             orderBy: [{ weekday: "asc" }, { startTime: "asc" }],
             select: { weekday: true, startTime: true, endTime: true, slotMinutes: true },
@@ -46,8 +47,9 @@ publicRouter.get("/doctors/:id", async (req, res) => {
     doctor.locations.map(async (loc) => ({
       id: loc.id,
       name: loc.name,
-      address: loc.address,
+      address: loc.isHomeVisit ? "Atención en el domicilio del paciente" : loc.address,
       notes: loc.notes,
+      isHomeVisit: loc.isHomeVisit,
       schedules: loc.schedules,
       availability: await getAvailableDays(doctor.id, loc.id),
     }))

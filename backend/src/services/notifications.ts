@@ -16,6 +16,11 @@ function when(a: FullAppointment): string {
 }
 
 function where(a: FullAppointment): string {
+  if (a.location.isHomeVisit) {
+    return a.patientAddress
+      ? `A domicilio — ${a.patientAddress}`
+      : `A domicilio (${a.location.name})`;
+  }
   return `${a.location.name} (${a.location.address})`;
 }
 

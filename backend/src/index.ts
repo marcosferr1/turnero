@@ -17,6 +17,7 @@ import { twilioWebhookRouter } from "./bot/twilioWebhook";
 import { startBaileys } from "./bot/baileys";
 import { startReminderJob } from "./jobs/reminders";
 import { baileysQrRouter } from "./routes/baileysQr";
+import { baileysQrPairingUrl } from "./lib/baileysPairingUrl";
 
 runStartupSecurityChecks();
 
@@ -57,6 +58,10 @@ app.use("/api", requireAuth, catalogRouter);
 
 app.listen(config.port, () => {
   console.log(`[api] Escuchando en http://localhost:${config.port} (WhatsApp: ${config.whatsapp.mode})`);
+  if (config.whatsapp.mode === "baileys") {
+    const qrUrl = baileysQrPairingUrl();
+    if (qrUrl) console.log(`[baileys] Vinculación WhatsApp (página QR): ${qrUrl}`);
+  }
   startReminderJob();
   startBaileys();
 });

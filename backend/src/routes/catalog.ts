@@ -76,13 +76,26 @@ catalogRouter.get("/locations", async (req, res) => {
 });
 
 catalogRouter.post("/locations", async (req, res) => {
-  const { name, address, notes } = req.body || {};
+  const { name, address, notes, isHomeVisit } = req.body || {};
   const doctorId = scopedDoctorId(req) ?? req.body?.doctorId;
-  if (!name || !address || !doctorId) {
+  const home = Boolean(isHomeVisit);
+  const resolvedName = name || (home ? "A domicilio" : "");
+  const resolvedAddress = address || (home ? "Visita en el domicilio del paciente" : "");
+  if (!resolvedName || !resolvedAddress || !doctorId) {
     res.status(400).json({ error: "Nombre, dirección y doctor requeridos" });
     return;
   }
-  res.status(201).json(await prisma.location.create({ data: { doctorId, name, address, notes } }));
+  res.status(201).json(
+    await prisma.location.create({
+      data: {
+        doctorId,
+        name: resolvedName,
+        address: resolvedAddress,
+        notes,
+        isHomeVisit: home,
+      },
+    })
+  );
 });
 
 catalogRouter.put("/locations/:id", async (req, res) => {
@@ -93,8 +106,19 @@ catalogRouter.put("/locations/:id", async (req, res) => {
     res.status(404).json({ error: "Sede no encontrada" });
     return;
   }
-  const { name, address, notes, active } = req.body || {};
-  res.json(await prisma.location.update({ where: { id }, data: { name, address, notes, active } }));
+  const { name, address, notes, active, isHomeVisit } = req.body || {};
+  res.json(
+    await prisma.location.update({
+      where: { id },
+      data: {
+        name,
+        address,
+        notes,
+        active,
+        ...(isHomeVisit !== undefined ? { isHomeVisit: Boolean(isHomeVisit) } : {}),
+      },
+    })
+  );
 });
 
 // ---------- Horarios semanales ----------
@@ -130,6 +154,39 @@ catalogRouter.post("/schedules", async (req, res) => {
   }
   res.status(201).json(
     await prisma.doctorSchedule.create({
+      data: { doctorId, locationId, weekday, startTime, endTime, slotMinutes },
+      include: { location: true, doctor: true },
+    })
+  );
+});
+
+catalogRouter.put("/schedules/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const scope = scopedDoctorId(req);
+  const existing = await prisma.doctorSchedule.findUnique({ where: { id } });
+  if (!existing || (scope && existing.doctorId !== scope)) {
+    res.status(404).json({ error: "Horario no encontrado" });
+    return;
+  }
+
+  const { locationId, weekday, startTime, endTime, slotMinutes } = req.body || {};
+  const doctorId = scope ?? existing.doctorId;
+  if (locationId == null || weekday == null || !startTime || !endTime || !slotMinutes) {
+    res.status(400).json({ error: "Faltan campos requeridos" });
+    return;
+  }
+  if (startTime >= endTime) {
+    res.status(400).json({ error: "La hora de inicio debe ser anterior a la de fin" });
+    return;
+  }
+  const location = await prisma.location.findUnique({ where: { id: locationId } });
+  if (!location || location.doctorId !== doctorId) {
+    res.status(400).json({ error: "La sede no pertenece a este profesional" });
+    return;
+  }
+  res.json(
+    await prisma.doctorSchedule.update({
+      where: { id },
       data: { doctorId, locationId, weekday, startTime, endTime, slotMinutes },
       include: { location: true, doctor: true },
     })

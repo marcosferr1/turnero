@@ -146,7 +146,11 @@ export default function Pacientes() {
                     <TableRow key={a.id}>
                       <TableCell>{formatLong(a.date)}</TableCell>
                       <TableCell>{a.time} hs</TableCell>
-                      <TableCell>{a.location.name}</TableCell>
+                      <TableCell>
+                        {a.location.isHomeVisit
+                          ? `Domicilio${a.patientAddress ? ` — ${a.patientAddress}` : ''}`
+                          : a.location.name}
+                      </TableCell>
                       <TableCell>
                         <StatusBadge status={a.status} />
                       </TableCell>

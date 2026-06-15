@@ -38,6 +38,7 @@ export interface Location {
   name: string
   address: string
   notes?: string | null
+  isHomeVisit: boolean
   active: boolean
   doctor?: { id: number; name: string }
 }
@@ -92,6 +93,7 @@ export interface Appointment {
   durationMinutes: number
   status: AppointmentStatus
   motivo?: string | null
+  patientAddress?: string | null
   createdVia: string
   doctor: Doctor
   location: Location

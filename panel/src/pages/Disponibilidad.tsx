@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { formatLong, todayStr } from '../lib'
@@ -39,6 +39,7 @@ export default function Disponibilidad() {
   const [error, setError] = useState('')
 
   const [schedForm, setSchedForm] = useState({ locationId: 0, weekday: 1, startTime: '09:00', endTime: '13:00', slotMinutes: 30 })
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
   const [blockForm, setBlockForm] = useState({ dateFrom: todayStr(), dateTo: todayStr(), reason: '' })
 
   useEffect(() => {
@@ -83,10 +84,26 @@ export default function Disponibilidad() {
 
   useEffect(load, [load])
 
-  async function addSchedule() {
+  function resetSchedForm() {
+    setEditingSchedule(null)
+    setSchedForm({
+      locationId: locations[0]?.id || 0,
+      weekday: 1,
+      startTime: '09:00',
+      endTime: '13:00',
+      slotMinutes: 30,
+    })
+  }
+
+  async function saveSchedule() {
     setError('')
     try {
-      await api.post('/api/schedules', { ...schedForm, doctorId })
+      if (editingSchedule) {
+        await api.put(`/api/schedules/${editingSchedule.id}`, { ...schedForm, doctorId })
+      } else {
+        await api.post('/api/schedules', { ...schedForm, doctorId })
+      }
+      resetSchedForm()
       load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error')
@@ -111,7 +128,20 @@ export default function Disponibilidad() {
         description="Horarios de atención semanales y bloqueos puntuales."
         actions={
           !isDoctor && doctors.length > 0 ? (
-            <Select value={String(doctorId)} onValueChange={(v) => setDoctorId(Number(v))}>
+            <Select
+              value={String(doctorId)}
+              onValueChange={(v) => {
+                setDoctorId(Number(v))
+                setEditingSchedule(null)
+                setSchedForm({
+                  locationId: 0,
+                  weekday: 1,
+                  startTime: '09:00',
+                  endTime: '13:00',
+                  slotMinutes: 30,
+                })
+              }}
+            >
               <SelectTrigger className="w-full sm:w-56">
                 <SelectValue />
               </SelectTrigger>
@@ -161,21 +191,42 @@ export default function Disponibilidad() {
                       </TableCell>
                       <TableCell>{s.slotMinutes} min</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={async () => {
-                            const ok = await confirm({
-                              title: 'Eliminar horario',
-                              description: '¿Eliminar este horario de atención?',
-                              confirmLabel: 'Eliminar',
-                            })
-                            if (ok) api.delete(`/api/schedules/${s.id}`).then(load)
-                          }}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="icon-sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingSchedule(s)
+                              setSchedForm({
+                                locationId: s.locationId,
+                                weekday: s.weekday,
+                                startTime: s.startTime,
+                                endTime: s.endTime,
+                                slotMinutes: s.slotMinutes,
+                              })
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: 'Eliminar horario',
+                                description: '¿Eliminar este horario de atención?',
+                                confirmLabel: 'Eliminar',
+                              })
+                              if (ok) {
+                                if (editingSchedule?.id === s.id) resetSchedForm()
+                                api.delete(`/api/schedules/${s.id}`).then(load)
+                              }
+                            }}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -185,6 +236,11 @@ export default function Disponibilidad() {
           )}
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {editingSchedule && (
+              <p className="text-sm text-muted-foreground sm:col-span-2 lg:col-span-5">
+                Editando horario de {WEEKDAYS[editingSchedule.weekday]} — {editingSchedule.location.name}
+              </p>
+            )}
             <div className="grid gap-2">
               <Label>Día</Label>
               <Select
@@ -216,6 +272,7 @@ export default function Disponibilidad() {
                   {locations.map((l) => (
                     <SelectItem key={l.id} value={String(l.id)}>
                       {l.name}
+                      {l.isHomeVisit ? ' (domicilio)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -248,10 +305,21 @@ export default function Disponibilidad() {
               />
             </div>
           </div>
-          <Button className="mt-4" onClick={addSchedule} disabled={!schedForm.locationId}>
-            <Plus className="size-4" />
-            Agregar horario
-          </Button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button onClick={saveSchedule} disabled={!schedForm.locationId}>
+              {editingSchedule ? 'Guardar cambios' : (
+                <>
+                  <Plus className="size-4" />
+                  Agregar horario
+                </>
+              )}
+            </Button>
+            {editingSchedule && (
+              <Button variant="outline" onClick={resetSchedForm}>
+                Cancelar
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

@@ -7,6 +7,16 @@ export type WhatsAppMode = "simulator" | "cloud" | "twilio" | "baileys";
 
 const isProduction = process.env.NODE_ENV === "production";
 
+function resolvePublicUrl(port: number): string {
+  const explicit = (
+    process.env.PUBLIC_URL ||
+    (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "")
+  ).replace(/\/$/, "");
+  if (explicit) return explicit;
+  if (!isProduction) return `http://localhost:${port}`;
+  return "";
+}
+
 function parseCorsOrigins(): string[] {
   const raw = process.env.CORS_ORIGIN?.trim();
   if (!raw) return [];
@@ -23,8 +33,10 @@ export const config = {
     windowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || "900000", 10),
   },
   utcOffset: process.env.APP_UTC_OFFSET || "-03:00",
-  /** URL pública HTTPS del backend (Vercel/Railway). Railway setea RAILWAY_PUBLIC_DOMAIN. */
-  publicUrl: (process.env.PUBLIC_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "")).replace(/\/$/, ""),
+  /** URL pública del backend. En local sin PUBLIC_URL → http://localhost:PORT */
+  get publicUrl(): string {
+    return resolvePublicUrl(this.port);
+  },
   whatsapp: {
     mode: (process.env.WHATSAPP_MODE || "simulator") as WhatsAppMode,
     token: process.env.WHATSAPP_TOKEN || "",

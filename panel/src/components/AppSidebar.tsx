@@ -81,7 +81,7 @@ export function SidebarContent({
           <Stethoscope className="size-4.5" />
         </div>
         <div className="text-base font-bold tracking-tight text-white">
-          Turnero<span className="text-sidebar-primary">Médico</span>
+          Turnero<span className="text-sidebar-primary">Neurología</span>
         </div>
       </div>
 

@@ -29,6 +29,7 @@ interface PublicLocation {
   name: string
   address: string
   notes: string | null
+  isHomeVisit?: boolean
   schedules: PublicSchedule[]
   availability: DaySummary[]
 }
@@ -139,7 +140,11 @@ export default function PublicDoctor() {
                     <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
                     <div>
                       <p className="font-medium">{location.name}</p>
-                      <p className="text-sm text-muted-foreground">{location.address}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {location.isHomeVisit
+                          ? 'Atención en el domicilio del paciente'
+                          : location.address}
+                      </p>
                       {location.notes && (
                         <p className="mt-1 text-xs text-muted-foreground">{location.notes}</p>
                       )}

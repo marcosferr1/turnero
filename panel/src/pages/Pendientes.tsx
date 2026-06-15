@@ -83,7 +83,13 @@ export default function Pendientes() {
                       <dt className="text-muted-foreground">Obra social</dt>
                       <dd>{a.patient.insurance || '—'}</dd>
                       <dt className="text-muted-foreground">Sede</dt>
-                      <dd>{a.location.name}</dd>
+                      <dd>{a.location.isHomeVisit ? 'A domicilio' : a.location.name}</dd>
+                      {a.location.isHomeVisit && a.patientAddress && (
+                        <>
+                          <dt className="text-muted-foreground">Dirección</dt>
+                          <dd>{a.patientAddress}</dd>
+                        </>
+                      )}
                       {!isDoctor && (
                         <>
                           <dt className="text-muted-foreground">Profesional</dt>
@@ -135,6 +141,7 @@ export default function Pendientes() {
                         <TableHead>Obra social</TableHead>
                         <TableHead>Motivo</TableHead>
                         <TableHead>Sede</TableHead>
+                        <TableHead>Dirección</TableHead>
                         {!isDoctor && <TableHead>Profesional</TableHead>}
                         <TableHead />
                       </TableRow>
@@ -151,7 +158,10 @@ export default function Pendientes() {
                           <TableCell>{a.patient.dni || '—'}</TableCell>
                           <TableCell>{a.patient.insurance || '—'}</TableCell>
                           <TableCell className="max-w-44 truncate">{a.motivo || '—'}</TableCell>
-                          <TableCell>{a.location.name}</TableCell>
+                          <TableCell>{a.location.isHomeVisit ? 'A domicilio' : a.location.name}</TableCell>
+                          <TableCell className="max-w-48 truncate">
+                            {a.location.isHomeVisit ? a.patientAddress || '—' : '—'}
+                          </TableCell>
                           {!isDoctor && <TableCell>{a.doctor.name}</TableCell>}
                           <TableCell className="text-right whitespace-nowrap">
                             <div className="flex justify-end gap-2">
