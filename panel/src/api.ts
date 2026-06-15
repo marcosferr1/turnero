@@ -1,5 +1,12 @@
 const TOKEN_KEY = 'turnero_token'
 
+/** Vacío en local: Vite proxyea /api → backend. En Vercel/Railway: URL pública del backend. */
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+
+function apiUrl(path: string): string {
+  return `${API_BASE}${path}`
+}
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
@@ -22,7 +29,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const res = await fetch(path, { ...options, headers })
+  const res = await fetch(apiUrl(path), { ...options, headers })
   if (res.status === 401 && !path.includes('/auth/login')) {
     setToken(null)
     window.location.href = '/login'
@@ -45,7 +52,7 @@ export const api = {
 /** Peticiones públicas (sin token, sin redirección a login). */
 export const publicApi = {
   get: async <T>(path: string): Promise<T> => {
-    const res = await fetch(path, { headers: { 'Content-Type': 'application/json' } })
+    const res = await fetch(apiUrl(path), { headers: { 'Content-Type': 'application/json' } })
     const body = await res.json().catch(() => ({}))
     if (!res.ok) throw new ApiError(res.status, body.error || 'Error en la solicitud')
     return body as T
