@@ -4,7 +4,7 @@ import { getBotContext } from "./context";
 import { setPendingChoices } from "./pendingChoices";
 import { sendTwilioWhatsApp } from "./twilioApi";
 import { twilioFromForDoctor } from "./doctorSend";
-import { sendBaileysText, sendBaileysList, sendBaileysButtons } from "./baileys";
+import { sendBaileysText } from "./baileys";
 
 export interface ListRow {
   id: string;
@@ -148,14 +148,6 @@ export async function sendList(
     if (!textOk) {
       console.error("[whatsapp] Baileys no pudo enviar menú numerado.");
     }
-    if (config.baileys.nativeMenus) {
-      void sendBaileysList(ctx.patientPhone, body, buttonLabel, limited, ctx.patientJid).then(
-        (ok) => {
-          if (ok) console.log("[baileys] Menú nativo enviado.");
-          else console.warn("[baileys] Menú nativo no disponible en este dispositivo.");
-        }
-      );
-    }
     return;
   }
   await callCloudApi({
@@ -203,12 +195,6 @@ export async function sendButtons(to: string, body: string, buttons: Button[]): 
     const textOk = await callBaileysApi(textBody);
     if (!textOk) {
       console.error("[whatsapp] Baileys no pudo enviar botones numerados.");
-    }
-    if (config.baileys.nativeMenus) {
-      void sendBaileysButtons(ctx.patientPhone, body, limited, ctx.patientJid).then((ok) => {
-        if (ok) console.log("[baileys] Botones nativos enviados.");
-        else console.warn("[baileys] Botones nativos no disponibles en este dispositivo.");
-      });
     }
     return;
   }

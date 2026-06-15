@@ -50,3 +50,19 @@ El código **408** suele ser timeout: la sesión se perdió o el contenedor rein
 - **Obligatorio**: Volume montado en `/app/.baileys_auth` (ver arriba).
 - Sin volume, cada redeploy o restart pide QR de nuevo.
 - Si se desconecta, los logs de QR se repiten como máximo **una vez cada 5 minutos** (no spamean el secreto).
+
+## Anti-detección Baileys (comportamiento humano)
+
+Por defecto el bot simula respuesta humana en **todos** los mensajes salientes (conversación y notificaciones):
+
+| Variable | Default | Notas |
+| --- | --- | --- |
+| `BAILEYS_HUMANIZE` | `true` | `false` desactiva retraso y presencia |
+| `BAILEYS_REPLY_DELAY_MIN_MS` | `2000` | Mínimo antes de enviar |
+| `BAILEYS_REPLY_DELAY_MAX_MS` | `4000` | Máximo antes de enviar |
+
+- Antes de cada mensaje: estado **escribiendo** + espera aleatoria 2–4 s.
+- Menús: solo **texto numerado** (1, 2, 3…). No uses `BAILEYS_NATIVE_MENUS=true` en producción.
+- Saludos y pregunta del menú principal varían levemente entre conversaciones.
+
+**Nota:** un job con muchos recordatorios tardará ~2–4 s por paciente. Para desactivar: `BAILEYS_HUMANIZE=false`.

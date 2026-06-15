@@ -23,6 +23,11 @@ runStartupSecurityChecks();
 
 const app = express();
 
+// Railway (y otros PaaS) terminan TLS y envían X-Forwarded-For; requerido por express-rate-limit.
+if (config.isProduction) {
+  app.set("trust proxy", 1);
+}
+
 app.use(helmet({ contentSecurityPolicy: false }));
 
 const corsOrigin = config.corsOrigins.length

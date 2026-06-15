@@ -56,6 +56,32 @@ function resolveReplyJid(phone: string, replyJid?: string): string {
   return phoneToJid(phone);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function randomDelayMs(): number {
+  const { replyDelayMinMs, replyDelayMaxMs } = config.baileys;
+  const min = Math.min(replyDelayMinMs, replyDelayMaxMs);
+  const max = Math.max(replyDelayMinMs, replyDelayMaxMs);
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+async function setPresence(jid: string, presence: "composing" | "paused"): Promise<void> {
+  if (!socket) return;
+  try {
+    await socket.sendPresenceUpdate(presence, jid);
+  } catch {
+    // presencia opcional; no bloquear el envío
+  }
+}
+
+async function humanizeBeforeSend(jid: string): Promise<void> {
+  if (!config.baileys.humanize) return;
+  await setPresence(jid, "composing");
+  await sleep(randomDelayMs());
+}
+
 export async function sendBaileysText(
   to: string,
   body: string,
@@ -67,12 +93,17 @@ export async function sendBaileysText(
   }
   const jid = resolveReplyJid(to, replyJid);
   try {
+    await humanizeBeforeSend(jid);
     await socket.sendMessage(jid, { text: body });
     console.log(`[baileys] Enviado a ${jid} (${body.length} chars)`);
     return true;
   } catch (err) {
     console.error(`[baileys] Error al enviar mensaje a ${jid}:`, err);
     return false;
+  } finally {
+    if (config.baileys.humanize) {
+      await setPresence(jid, "paused");
+    }
   }
 }
 

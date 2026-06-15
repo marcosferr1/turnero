@@ -58,6 +58,10 @@ export const config = {
     /** Número vinculado. Acepta 543517714542 o 5493517714542 */
     phone: normalizeWhatsAppPhone(process.env.BAILEYS_PHONE || "5493517714542"),
     authDir: process.env.BAILEYS_AUTH_DIR || ".baileys_auth",
+    /** Retraso + presencia "escribiendo" antes de cada mensaje saliente. */
+    humanize: process.env.BAILEYS_HUMANIZE !== "false",
+    replyDelayMinMs: parseInt(process.env.BAILEYS_REPLY_DELAY_MIN_MS || "2000", 10),
+    replyDelayMaxMs: parseInt(process.env.BAILEYS_REPLY_DELAY_MAX_MS || "4000", 10),
     /** Intentar menús nativos además del texto numerado (experimental). */
     nativeMenus: process.env.BAILEYS_NATIVE_MENUS === "true",
     /** Token opcional para proteger GET /baileys/qr (?token=...) */

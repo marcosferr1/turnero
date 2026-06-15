@@ -9,6 +9,7 @@ import {
   sendList as waSendList,
   sendButtons as waSendButtons,
 } from "./whatsapp";
+import { pickGreeting, pickMenuPrompt } from "./copy";
 
 const CONVERSATION_TIMEOUT_MS = 30 * 60 * 1000;
 const RESET_WORDS = /^(menu|menú|hola|volver|inicio|empezar|cancelar)$/i;
@@ -140,15 +141,12 @@ async function setState(state: string, data: ConvData): Promise<void> {
 
 async function sendGreeting(): Promise<void> {
   const { doctorName, doctorSpecialty } = getBotContext();
-  await sendText(
-    `¡Hola! Soy el asistente de *${doctorName}* (${doctorSpecialty}).\n` +
-      "Por acá podés consultar información, ver disponibilidad y pedir turnos."
-  );
+  await sendText(pickGreeting(doctorName, doctorSpecialty));
   await sendMainMenu();
 }
 
 async function sendMainMenu(): Promise<void> {
-  await sendList("¿Qué necesitás hacer?", "Ver opciones", [
+  await sendList(pickMenuPrompt(), "Ver opciones", [
     { id: "main_info", title: "Información", description: "Indicaciones y preguntas frecuentes" },
     { id: "main_locations", title: "Lugares de atención", description: "Sedes, direcciones y días" },
     { id: "main_avail", title: "Ver disponibilidad", description: "Días y horarios libres" },
