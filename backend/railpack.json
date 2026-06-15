@@ -4,7 +4,13 @@
   "packages": {
     "node": "20"
   },
+  "steps": {
+    "build": {
+      "commands": ["...", "npm run build"]
+    }
+  },
   "deploy": {
+    "inputs": ["...", { "step": "build", "include": ["."] }],
     "startCommand": "npx prisma migrate deploy && npm start"
   }
 }
