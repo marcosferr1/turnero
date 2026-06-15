@@ -1,0 +1,12 @@
+{
+  "name": "turnero",
+  "private": true,
+  "description": "Turnero médico — monorepo (backend + panel)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "cd backend && npm ci && npm run build",
+    "start": "cd backend && npx prisma migrate deploy && npm start"
+  }
+}

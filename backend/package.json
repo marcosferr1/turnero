@@ -4,9 +4,13 @@
   "private": true,
   "description": "Backend del turnero médico: API REST, webhook de WhatsApp y jobs",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "seed": "tsx prisma/seed.ts",
@@ -24,7 +28,8 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^8.0.11",
     "pino": "^10.3.1",
-    "qrcode-terminal": "^0.12.0"
+    "qrcode-terminal": "^0.12.0",
+    "prisma": "^6.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -34,7 +39,6 @@
     "@types/node": "^20.14.0",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^8.0.1",
-    "prisma": "^6.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }
