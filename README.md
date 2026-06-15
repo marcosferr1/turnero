@@ -43,10 +43,6 @@ npm run dev
 
 Abrí [http://localhost:5174](http://localhost:5174) e ingresá con alguno de los usuarios del seed:
 
-| Usuario | Contraseña | Rol |
-| --- | --- | --- |
-| `admin` | `admin123` | Administrador: ve todo, da de alta doctoras (sección **Usuarios**), maneja la info del bot y el simulador |
-| `dra.gonzalez` | `doctora123` | Doctora: ve **solo su** agenda, pendientes, pacientes y disponibilidad, y autogestiona su consultorio |
 
 ## Roles
 
