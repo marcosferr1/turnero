@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  SECRETARIA
+}
+
+enum AppointmentStatus {
+  PENDIENTE
+  CONFIRMADO
+  RECHAZADO
+  CANCELADO_PACIENTE
+  CANCELADO_DOCTOR
+  COMPLETADO
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  fullName     String
+  role         Role     @default(SECRETARIA)
+  active       Boolean  @default(true)
+  doctorId     Int?     @unique // vinculado cuando role = DOCTOR
+  createdAt    DateTime @default(now())
+
+  doctor Doctor? @relation(fields: [doctorId], references: [id])
+
+  @@map("users")
+}
+
+model Doctor {
+  id        Int      @id @default(autoincrement())
+  name      String
+  specialty String
+  active    Boolean  @default(true)
+  /// ID del número en Meta Cloud API (metadata.phone_number_id del webhook).
+  whatsappPhoneNumberId String? @unique
+  /// Número visible para el paciente, ej. +54 9 261 555-1234
+  whatsappDisplayPhone  String?
+  createdAt DateTime @default(now())
+
+  user          User?
+  schedules     DoctorSchedule[]
+  blocks        ScheduleBlock[]
+  appointments  Appointment[]
+  locations     Location[]
+  conversations Conversation[]
+  infoContents  InfoContent[]
+
+  @@map("doctors")
+}
+
+/// Sede propia de un doctor.
+model Location {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  name      String
+  address   String
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  doctor       Doctor           @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  schedules    DoctorSchedule[]
+  appointments Appointment[]
+
+  @@map("locations")
+}
+
+/// Disponibilidad semanal recurrente de un doctor en una sede.
+model DoctorSchedule {
+  id          Int    @id @default(autoincrement())
+  doctorId    Int
+  locationId  Int
+  weekday     Int // 0 = domingo ... 6 = sábado
+  startTime   String // "HH:MM"
+  endTime     String // "HH:MM"
+  slotMinutes Int    @default(30)
+
+  doctor   Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@map("doctor_schedules")
+}
+
+/// Bloqueo puntual (vacaciones, feriados, ausencias). Rango de fechas inclusive.
+model ScheduleBlock {
+  id       Int     @id @default(autoincrement())
+  doctorId Int
+  dateFrom String // "YYYY-MM-DD"
+  dateTo   String // "YYYY-MM-DD"
+  reason   String?
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("schedule_blocks")
+}
+
+model Patient {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  fullName  String?
+  dni       String?
+  insurance String? // obra social / prepaga
+  email     String? // opcional, para recordatorios fuera de ventana WhatsApp
+  createdAt DateTime @default(now())
+
+  appointments Appointment[]
+
+  @@map("patients")
+}
+
+model Appointment {
+  id              Int               @id @default(autoincrement())
+  doctorId        Int
+  locationId      Int
+  patientId       Int
+  date            String // "YYYY-MM-DD"
+  time            String // "HH:MM"
+  durationMinutes Int               @default(30)
+  status          AppointmentStatus @default(PENDIENTE)
+  motivo          String?
+  createdVia      String            @default("bot") // bot | panel
+  reminderSentAt  DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  doctor   Doctor   @relation(fields: [doctorId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+  patient  Patient  @relation(fields: [patientId], references: [id])
+
+  @@index([date, status])
+  @@index([doctorId, date])
+  @@map("appointments")
+}
+
+/// Estado del flujo del bot por paciente y doctor (cada número de WhatsApp es independiente).
+model Conversation {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  doctorId  Int
+  state     String   @default("MENU")
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([phone, doctorId])
+  @@map("conversations")
+}
+
+/// Auditoría de mensajes entrantes y salientes.
+model MessageLog {
+  id        Int              @id @default(autoincrement())
+  phone     String
+  doctorId  Int?
+  direction MessageDirection
+  type      String // text | interactive | template
+  content   String
+  createdAt DateTime         @default(now())
+
+  @@index([phone, doctorId, createdAt])
+  @@map("message_log")
+}
+
+/// Textos de la sección "Información" del bot, propios de cada doctor.
+model InfoContent {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  title     String
+  body      String
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("info_contents")
+}
