@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { prisma } from "../prisma";
 import { combine, todayStr } from "../lib/dates";
 import { notifyRecordatorio } from "../services/notifications";
+import { logAppointmentEvent } from "../services/appointmentEvents";
 
 /**
  * Cada 10 minutos busca turnos confirmados que empiezan dentro de las próximas
@@ -35,6 +36,7 @@ export async function runReminders(): Promise<number> {
           where: { id: a.id },
           data: { reminderSentAt: new Date() },
         });
+        await logAppointmentEvent(a.id, a.doctorId, "RECORDATORIO_ENVIADO", { actor: "SYSTEM" });
         sent++;
       } catch (err) {
         console.error(`[jobs] Error enviando recordatorio del turno ${a.id}:`, err);

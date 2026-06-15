@@ -82,8 +82,16 @@ export default function Pendientes() {
                       <dd>{a.patient.dni || '—'}</dd>
                       <dt className="text-muted-foreground">Obra social</dt>
                       <dd>{a.patient.insurance || '—'}</dd>
+                      <dt className="text-muted-foreground">Email</dt>
+                      <dd className="break-all">{a.patient.email || '—'}</dd>
                       <dt className="text-muted-foreground">Sede</dt>
-                      <dd>{a.location.isHomeVisit ? 'A domicilio' : a.location.name}</dd>
+                      <dd>
+                        {a.location.isVirtualVisit
+                          ? 'Virtual'
+                          : a.location.isHomeVisit
+                            ? 'A domicilio'
+                            : a.location.name}
+                      </dd>
                       {a.location.isHomeVisit && a.patientAddress && (
                         <>
                           <dt className="text-muted-foreground">Dirección</dt>
@@ -139,6 +147,7 @@ export default function Pendientes() {
                         <TableHead>Paciente</TableHead>
                         <TableHead>DNI</TableHead>
                         <TableHead>Obra social</TableHead>
+                        <TableHead>Email</TableHead>
                         <TableHead>Motivo</TableHead>
                         <TableHead>Sede</TableHead>
                         <TableHead>Dirección</TableHead>
@@ -157,8 +166,15 @@ export default function Pendientes() {
                           </TableCell>
                           <TableCell>{a.patient.dni || '—'}</TableCell>
                           <TableCell>{a.patient.insurance || '—'}</TableCell>
+                          <TableCell className="max-w-40 truncate">{a.patient.email || '—'}</TableCell>
                           <TableCell className="max-w-44 truncate">{a.motivo || '—'}</TableCell>
-                          <TableCell>{a.location.isHomeVisit ? 'A domicilio' : a.location.name}</TableCell>
+                          <TableCell>
+                            {a.location.isVirtualVisit
+                              ? 'Virtual'
+                              : a.location.isHomeVisit
+                                ? 'A domicilio'
+                                : a.location.name}
+                          </TableCell>
                           <TableCell className="max-w-48 truncate">
                             {a.location.isHomeVisit ? a.patientAddress || '—' : '—'}
                           </TableCell>

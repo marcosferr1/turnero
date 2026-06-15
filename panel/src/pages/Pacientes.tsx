@@ -61,7 +61,7 @@ export default function Pacientes() {
             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="w-full pl-9"
-              placeholder="Buscar por nombre, teléfono o DNI…"
+              placeholder="Buscar por nombre, teléfono, DNI o email…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -82,6 +82,7 @@ export default function Pacientes() {
                   <TableRow>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Teléfono</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>DNI</TableHead>
                     <TableHead>Obra social</TableHead>
                     <TableHead>Turnos</TableHead>
@@ -93,6 +94,7 @@ export default function Pacientes() {
                     <TableRow key={p.id}>
                       <TableCell className="font-semibold">{p.fullName || 'Sin nombre'}</TableCell>
                       <TableCell>{p.phone}</TableCell>
+                      <TableCell className="max-w-44 truncate">{p.email || '—'}</TableCell>
                       <TableCell>{p.dni || '—'}</TableCell>
                       <TableCell>{p.insurance || '—'}</TableCell>
                       <TableCell>{p._count?.appointments ?? 0}</TableCell>
@@ -123,6 +125,8 @@ export default function Pacientes() {
             <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[110px_1fr]">
               <dt className="text-muted-foreground">Teléfono</dt>
               <dd className="font-medium">{selected.phone}</dd>
+              <dt className="text-muted-foreground">Email</dt>
+              <dd className="break-all font-medium">{selected.email || '—'}</dd>
               <dt className="text-muted-foreground">DNI</dt>
               <dd className="font-medium">{selected.dni || '—'}</dd>
               <dt className="text-muted-foreground">Obra social</dt>
@@ -147,9 +151,11 @@ export default function Pacientes() {
                       <TableCell>{formatLong(a.date)}</TableCell>
                       <TableCell>{a.time} hs</TableCell>
                       <TableCell>
-                        {a.location.isHomeVisit
-                          ? `Domicilio${a.patientAddress ? ` — ${a.patientAddress}` : ''}`
-                          : a.location.name}
+                        {a.location.isVirtualVisit
+                          ? 'Virtual'
+                          : a.location.isHomeVisit
+                            ? `Domicilio${a.patientAddress ? ` — ${a.patientAddress}` : ''}`
+                            : a.location.name}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={a.status} />

@@ -39,6 +39,7 @@ export interface Location {
   address: string
   notes?: string | null
   isHomeVisit: boolean
+  isVirtualVisit: boolean
   active: boolean
   doctor?: { id: number; name: string }
 }
@@ -70,6 +71,7 @@ export interface Patient {
   fullName?: string | null
   dni?: string | null
   insurance?: string | null
+  email?: string | null
   createdAt: string
   _count?: { appointments: number }
   appointments?: Appointment[]
@@ -107,6 +109,63 @@ export interface InfoContent {
   body: string
   sortOrder: number
   active: boolean
+}
+
+export type AppointmentEventType =
+  | 'SOLICITUD_CREADA'
+  | 'CREADO_PANEL'
+  | 'CONFIRMADO'
+  | 'RECHAZADO'
+  | 'CANCELADO_PACIENTE'
+  | 'CANCELADO_DOCTOR'
+  | 'COMPLETADO'
+  | 'REPROGRAMADO'
+  | 'RECORDATORIO_ENVIADO'
+
+export type AppointmentActor = 'BOT' | 'PANEL' | 'PATIENT' | 'SYSTEM'
+
+export interface AppointmentEvent {
+  id: number
+  appointmentId: number
+  doctorId: number
+  type: AppointmentEventType
+  actor: AppointmentActor
+  userId?: number | null
+  metadata?: {
+    oldDate?: string
+    oldTime?: string
+    newDate?: string
+    newTime?: string
+  } | null
+  createdAt: string
+  appointment: {
+    id: number
+    date: string
+    time: string
+    status: AppointmentStatus
+    patient: { id: number; phone: string; fullName?: string | null }
+    location: { id: number; name: string; isHomeVisit: boolean; isVirtualVisit: boolean }
+  }
+  user?: { id: number; fullName: string } | null
+}
+
+export const EVENT_LABEL: Record<AppointmentEventType, string> = {
+  SOLICITUD_CREADA: 'Nueva solicitud de turno',
+  CREADO_PANEL: 'Turno agregado desde el panel',
+  CONFIRMADO: 'Turno confirmado',
+  RECHAZADO: 'Solicitud rechazada',
+  CANCELADO_PACIENTE: 'Cancelado por el paciente',
+  CANCELADO_DOCTOR: 'Cancelado por el consultorio',
+  COMPLETADO: 'Turno completado',
+  REPROGRAMADO: 'Turno reprogramado',
+  RECORDATORIO_ENVIADO: 'Recordatorio enviado',
+}
+
+export const ACTOR_LABEL: Record<AppointmentActor, string> = {
+  BOT: 'WhatsApp',
+  PANEL: 'Panel',
+  PATIENT: 'Paciente',
+  SYSTEM: 'Sistema',
 }
 
 export interface DaySummary {

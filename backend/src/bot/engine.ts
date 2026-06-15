@@ -2,6 +2,7 @@ import { prisma } from "../prisma";
 import { formatDateHuman, todayStr } from "../lib/dates";
 import { getAvailableDays, getSlotsForDate, getSlotMinutes } from "../services/slots";
 import { notifySolicitudRecibida } from "../services/notifications";
+import { logAppointmentEvent } from "../services/appointmentEvents";
 import { isEmailSkipAnswer, isValidEmail } from "../lib/emailValidate";
 import { getBotContext } from "./context";
 import {
@@ -139,6 +140,28 @@ async function setState(state: string, data: ConvData): Promise<void> {
   });
 }
 
+async function isVirtualLocation(locationId?: number): Promise<boolean> {
+  if (!locationId) return false;
+  const { doctorId } = getBotContext();
+  const loc = await prisma.location.findFirst({ where: { id: locationId, doctorId } });
+  return Boolean(loc?.isVirtualVisit);
+}
+
+function emailPrompt(virtual: boolean, returningName?: string): string {
+  if (virtual) {
+    const hello = returningName ? `¡Hola de nuevo, ${returningName}!\n\n` : "";
+    return (
+      `${hello}Para la consulta virtual necesitamos tu *email*.\n` +
+      "Te enviaremos el enlace de Google Meet por Gmail ~1 hora antes del turno."
+    );
+  }
+  const hello = returningName ? `¡Hola de nuevo, ${returningName}!\n\n` : "";
+  return (
+    `${hello}¿Querés recibir el *recordatorio por email*? (opcional)\n` +
+    "Escribí tu correo o *no* para omitir."
+  );
+}
+
 async function sendGreeting(): Promise<void> {
   const { doctorName, doctorSpecialty } = getBotContext();
   await sendText(pickGreeting(doctorName, doctorSpecialty));
@@ -238,9 +261,11 @@ async function showLocations(): Promise<void> {
   const locLines = doctor.locations.map((loc) => {
     const days = [...new Set(loc.schedules.map((s) => s.weekday))].sort();
     const dayNames = days.map((d) => WEEKDAYS[d]).join(", ");
-    let block = loc.isHomeVisit
-      ? `*${loc.name}*\nAtención en el domicilio del paciente`
-      : `*${loc.name}*\n${loc.address}`;
+    let block = loc.isVirtualVisit
+      ? `*${loc.name}*\nConsulta virtual por videollamada`
+      : loc.isHomeVisit
+        ? `*${loc.name}*\nAtención en el domicilio del paciente`
+        : `*${loc.name}*\n${loc.address}`;
     if (dayNames) block += `\nDías de atención: ${dayNames}`;
     if (loc.notes) block += `\n${loc.notes}`;
     return block;
@@ -280,7 +305,12 @@ async function startLocationSelection(mode: "avail" | "book"): Promise<void> {
     locations.map((l) => ({
       id: `loc_${l.id}`,
       title: l.name.slice(0, 24),
-      description: (l.isHomeVisit ? "Visita a tu domicilio" : l.address).slice(0, 72),
+      description: (l.isVirtualVisit
+        ? "Videollamada (Meet)"
+        : l.isHomeVisit
+          ? "Visita a tu domicilio"
+          : l.address
+      ).slice(0, 72),
     }))
   );
 }
@@ -401,12 +431,9 @@ async function handleSelectSlot(data: ConvData, optionId?: string): Promise<void
     next.insurance = patient.insurance || undefined;
     if (patient.email) next.email = patient.email;
     if (!patient.email) {
+      const virtual = await isVirtualLocation(next.locationId);
       await setState("ASK_EMAIL", next);
-      await sendText(
-        `¡Hola de nuevo, ${patient.fullName}!\n\n` +
-          "¿Querés recibir el *recordatorio por email*? (opcional)\n" +
-          "Escribí tu correo o *no* para omitir."
-      );
+      await sendText(emailPrompt(virtual, patient.fullName));
       return;
     }
     await setState("ASK_MOTIVO", next);
@@ -445,15 +472,20 @@ async function handleAskInsurance(data: ConvData, text: string): Promise<void> {
     return;
   }
   await setState("ASK_EMAIL", { ...data, insurance: text });
-  await sendText(
-    "¿Querés recibir el *recordatorio por email*? (opcional)\n" +
-      "Escribí tu correo o *no* para omitir."
-  );
+  const virtual = await isVirtualLocation(data.locationId);
+  await sendText(emailPrompt(virtual));
 }
 
 async function handleAskEmail(data: ConvData, text: string): Promise<void> {
+  const virtual = await isVirtualLocation(data.locationId);
   let email: string | undefined;
   if (isEmailSkipAnswer(text)) {
+    if (virtual) {
+      await sendText(
+        "Para consultas virtuales el email es *obligatorio* (te enviamos el Meet por Gmail). Escribí tu correo:"
+      );
+      return;
+    }
     email = undefined;
   } else if (isValidEmail(text)) {
     email = text.trim().toLowerCase();
@@ -586,6 +618,7 @@ async function handleConfirmBooking(data: ConvData, optionId?: string): Promise<
   });
 
   await setState("MENU", {});
+  await logAppointmentEvent(appointment.id, doctorId, "SOLICITUD_CREADA", { actor: "BOT" });
   await notifySolicitudRecibida(appointment);
 }
 
@@ -616,7 +649,9 @@ async function startMyAppts(): Promise<void> {
 
   const lines = appointments.map((a) => {
     const status = a.status === "PENDIENTE" ? "pendiente de confirmación" : "confirmado";
-    const place = a.location.isHomeVisit
+    const place = a.location.isVirtualVisit
+      ? "consulta virtual"
+      : a.location.isHomeVisit
       ? `a domicilio${a.patientAddress ? ` (${a.patientAddress})` : ""}`
       : a.location.name;
     return `• ${formatDateHuman(a.date)} ${a.time} hs — ${place} (${status})`;
@@ -675,6 +710,7 @@ async function handleConfirmCancel(data: ConvData, optionId?: string): Promise<v
         where: { id: a.id },
         data: { status: "CANCELADO_PACIENTE" },
       });
+      await logAppointmentEvent(a.id, doctorId, "CANCELADO_PACIENTE", { actor: "PATIENT" });
       await sendText("Listo, tu turno fue cancelado y el horario quedó liberado.");
     }
   } else if (optionId === "cancel_no") {

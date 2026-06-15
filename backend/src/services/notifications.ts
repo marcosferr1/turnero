@@ -4,6 +4,7 @@ import { isWhatsAppCustomerWindowOpen } from "../lib/customerWindow";
 import { sendTemplate, sendText } from "../bot/whatsapp";
 import { withDoctorContext } from "../bot/doctorSend";
 import { sendReminderEmail } from "./email";
+import { virtualMeetNotice } from "../lib/virtualVisit";
 
 export type FullAppointment = Appointment & {
   doctor: Doctor;
@@ -16,6 +17,9 @@ function when(a: FullAppointment): string {
 }
 
 function where(a: FullAppointment): string {
+  if (a.location.isVirtualVisit) {
+    return "Consulta virtual (videollamada)";
+  }
   if (a.location.isHomeVisit) {
     return a.patientAddress
       ? `A domicilio — ${a.patientAddress}`
@@ -42,7 +46,8 @@ export async function notifyConfirmado(a: FullAppointment): Promise<void> {
       [a.patient.fullName || "paciente", a.doctor.name, when(a), where(a)],
       `*Tu turno fue confirmado*\n\n` +
         `Profesional: ${a.doctor.name}\nFecha: ${when(a)}\nLugar: ${where(a)}\n\n` +
-        `Si no podés asistir, escribinos para cancelarlo.`
+        `Si no podés asistir, escribinos para cancelarlo.` +
+        virtualMeetNotice(a.location)
     )
   );
 }
@@ -106,7 +111,8 @@ export async function notifyReprogramado(
         `Profesional: ${a.doctor.name}\n` +
         `Antes: ${formatDateHuman(oldDate)} a las ${oldTime} hs\n` +
         `Ahora: ${when(a)}\nLugar: ${where(a)}\n\n` +
-        `Si el nuevo horario no te sirve, escribinos para cambiarlo.`
+        `Si el nuevo horario no te sirve, escribinos para cambiarlo.` +
+        virtualMeetNotice(a.location)
     )
   );
 }

@@ -76,11 +76,14 @@ catalogRouter.get("/locations", async (req, res) => {
 });
 
 catalogRouter.post("/locations", async (req, res) => {
-  const { name, address, notes, isHomeVisit } = req.body || {};
+  const { name, address, notes, isHomeVisit, isVirtualVisit } = req.body || {};
   const doctorId = scopedDoctorId(req) ?? req.body?.doctorId;
-  const home = Boolean(isHomeVisit);
-  const resolvedName = name || (home ? "A domicilio" : "");
-  const resolvedAddress = address || (home ? "Visita en el domicilio del paciente" : "");
+  const virtual = Boolean(isVirtualVisit);
+  const home = virtual ? false : Boolean(isHomeVisit);
+  const resolvedName = name || (virtual ? "Consulta virtual" : home ? "A domicilio" : "");
+  const resolvedAddress =
+    address ||
+    (virtual ? "Videollamada (Google Meet)" : home ? "Visita en el domicilio del paciente" : "");
   if (!resolvedName || !resolvedAddress || !doctorId) {
     res.status(400).json({ error: "Nombre, dirección y doctor requeridos" });
     return;
@@ -93,6 +96,7 @@ catalogRouter.post("/locations", async (req, res) => {
         address: resolvedAddress,
         notes,
         isHomeVisit: home,
+        isVirtualVisit: virtual,
       },
     })
   );
@@ -106,7 +110,9 @@ catalogRouter.put("/locations/:id", async (req, res) => {
     res.status(404).json({ error: "Sede no encontrada" });
     return;
   }
-  const { name, address, notes, active, isHomeVisit } = req.body || {};
+  const { name, address, notes, active, isHomeVisit, isVirtualVisit } = req.body || {};
+  const virtual = isVirtualVisit !== undefined ? Boolean(isVirtualVisit) : existing.isVirtualVisit;
+  const home = virtual ? false : isHomeVisit !== undefined ? Boolean(isHomeVisit) : existing.isHomeVisit;
   res.json(
     await prisma.location.update({
       where: { id },
@@ -115,7 +121,8 @@ catalogRouter.put("/locations/:id", async (req, res) => {
         address,
         notes,
         active,
-        ...(isHomeVisit !== undefined ? { isHomeVisit: Boolean(isHomeVisit) } : {}),
+        isHomeVisit: home,
+        isVirtualVisit: virtual,
       },
     })
   );

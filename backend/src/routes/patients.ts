@@ -15,6 +15,7 @@ patientsRouter.get("/", async (req, res) => {
       { fullName: { contains: search, mode: "insensitive" } },
       { phone: { contains: search } },
       { dni: { contains: search } },
+      { email: { contains: search, mode: "insensitive" } },
     ];
   }
   // Una doctora solo ve pacientes que tuvieron turnos con ella.

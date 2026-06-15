@@ -56,7 +56,7 @@ function Sedes() {
   const [items, setItems] = useState<Location[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ name: '', address: '', notes: '', doctorId: 0, isHomeVisit: false })
+  const [form, setForm] = useState({ name: '', address: '', notes: '', doctorId: 0, isHomeVisit: false, isVirtualVisit: false })
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
@@ -76,7 +76,7 @@ function Sedes() {
     setError('')
     try {
       await api.post('/api/locations', form)
-      setForm((f) => ({ ...f, name: '', address: '', notes: '', isHomeVisit: false }))
+      setForm((f) => ({ ...f, name: '', address: '', notes: '', isHomeVisit: false, isVirtualVisit: false }))
       load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error')
@@ -111,9 +111,17 @@ function Sedes() {
               {items.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="font-semibold">{l.name}</TableCell>
-                  <TableCell>{l.isHomeVisit ? 'A domicilio' : 'Consultorio'}</TableCell>
+                  <TableCell>
+                    {l.isVirtualVisit ? 'Virtual' : l.isHomeVisit ? 'A domicilio' : 'Consultorio'}
+                  </TableCell>
                   <TableCell>{l.doctor?.name || '—'}</TableCell>
-                  <TableCell>{l.isHomeVisit ? 'Visita al paciente' : l.address}</TableCell>
+                  <TableCell>
+                    {l.isVirtualVisit
+                      ? 'Videollamada (Meet)'
+                      : l.isHomeVisit
+                        ? 'Visita al paciente'
+                        : l.address}
+                  </TableCell>
                   <TableCell className="max-w-44 truncate">{l.notes || '—'}</TableCell>
                   <TableCell>
                     <ActiveBadge active={l.active} />
@@ -137,11 +145,29 @@ function Sedes() {
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
               <input
                 type="checkbox"
+                checked={form.isVirtualVisit}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    isVirtualVisit: e.target.checked,
+                    isHomeVisit: e.target.checked ? false : form.isHomeVisit,
+                    name: e.target.checked && !form.name ? 'Consulta virtual' : form.name,
+                  })
+                }
+                className="size-4 rounded border-input"
+              />
+              Consulta virtual — videollamada (Google Meet por Gmail)
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
                 checked={form.isHomeVisit}
+                disabled={form.isVirtualVisit}
                 onChange={(e) =>
                   setForm({
                     ...form,
                     isHomeVisit: e.target.checked,
+                    isVirtualVisit: e.target.checked ? false : form.isVirtualVisit,
                     name: e.target.checked && !form.name ? 'A domicilio' : form.name,
                   })
                 }
@@ -172,7 +198,7 @@ function Sedes() {
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label>{form.isHomeVisit ? 'Nombre (opcional)' : 'Nombre'}</Label>
+            <Label>{form.isVirtualVisit || form.isHomeVisit ? 'Nombre (opcional)' : 'Nombre'}</Label>
             <Input
               value={form.name}
               placeholder={form.isHomeVisit ? 'A domicilio' : 'Consultorio Centro…'}
@@ -180,7 +206,13 @@ function Sedes() {
             />
           </div>
           <div className="grid gap-2">
-            <Label>{form.isHomeVisit ? 'Zona de cobertura (opcional)' : 'Dirección'}</Label>
+            <Label>
+              {form.isVirtualVisit
+                ? 'Detalle (opcional)'
+                : form.isHomeVisit
+                  ? 'Zona de cobertura (opcional)'
+                  : 'Dirección'}
+            </Label>
             <Input
               value={form.address}
               placeholder={form.isHomeVisit ? 'Ej. Córdoba capital y alrededores' : 'Calle 123, Ciudad'}
@@ -207,7 +239,10 @@ function Sedes() {
         <Button
           className="mt-4"
           onClick={add}
-          disabled={!form.doctorId || (!form.isHomeVisit && (!form.name || !form.address))}
+          disabled={
+            !form.doctorId ||
+            (!form.isHomeVisit && !form.isVirtualVisit && (!form.name || !form.address))
+          }
         >
           <Plus className="size-4" />
           Agregar sede

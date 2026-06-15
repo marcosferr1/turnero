@@ -22,6 +22,25 @@ enum AppointmentStatus {
   COMPLETADO
 }
 
+enum AppointmentEventType {
+  SOLICITUD_CREADA
+  CREADO_PANEL
+  CONFIRMADO
+  RECHAZADO
+  CANCELADO_PACIENTE
+  CANCELADO_DOCTOR
+  COMPLETADO
+  REPROGRAMADO
+  RECORDATORIO_ENVIADO
+}
+
+enum AppointmentActor {
+  BOT
+  PANEL
+  PATIENT
+  SYSTEM
+}
+
 enum MessageDirection {
   IN
   OUT
@@ -38,6 +57,8 @@ model User {
   createdAt    DateTime @default(now())
 
   doctor Doctor? @relation(fields: [doctorId], references: [id])
+
+  appointmentEvents AppointmentEvent[]
 
   @@map("users")
 }
@@ -60,6 +81,7 @@ model Doctor {
   locations     Location[]
   conversations Conversation[]
   infoContents  InfoContent[]
+  appointmentEvents AppointmentEvent[]
 
   @@map("doctors")
 }
@@ -73,6 +95,8 @@ model Location {
   notes       String?
   /// Si true, el paciente indica su domicilio al reservar (visita a domicilio).
   isHomeVisit Boolean  @default(false)
+  /// Si true, consulta por videollamada (Meet); el enlace se envía por email.
+  isVirtualVisit Boolean @default(false)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
@@ -146,6 +170,7 @@ model Appointment {
   doctor   Doctor   @relation(fields: [doctorId], references: [id])
   location Location @relation(fields: [locationId], references: [id])
   patient  Patient  @relation(fields: [patientId], references: [id])
+  events   AppointmentEvent[]
 
   @@index([date, status])
   @@index([doctorId, date])
@@ -195,4 +220,23 @@ model InfoContent {
   doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
   @@map("info_contents")
+}
+
+/// Historial de movimientos de turnos para el panel.
+model AppointmentEvent {
+  id            Int                  @id @default(autoincrement())
+  appointmentId Int
+  doctorId      Int
+  type          AppointmentEventType
+  actor         AppointmentActor
+  userId        Int?
+  metadata      Json?
+  createdAt     DateTime             @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  doctor      Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([doctorId, createdAt])
+  @@map("appointment_events")
 }

@@ -272,7 +272,7 @@ export default function Disponibilidad() {
                   {locations.map((l) => (
                     <SelectItem key={l.id} value={String(l.id)}>
                       {l.name}
-                      {l.isHomeVisit ? ' (domicilio)' : ''}
+                      {l.isVirtualVisit ? ' (virtual)' : l.isHomeVisit ? ' (domicilio)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

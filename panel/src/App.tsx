@@ -15,6 +15,7 @@ import Pacientes from './pages/Pacientes'
 import Configuracion from './pages/Configuracion'
 import Simulador from './pages/Simulador'
 import MiConsultorio from './pages/MiConsultorio'
+import Actividad from './pages/Actividad'
 import Usuarios from './pages/Usuarios'
 import PublicDoctor from './pages/PublicDoctor'
 import type { Appointment } from './types'
@@ -119,6 +120,7 @@ export default function App() {
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/disponibilidad" element={<Disponibilidad />} />
           <Route path="/pacientes" element={<Pacientes />} />
+          <Route path="/actividad" element={<Actividad />} />
           {isDoctor && <Route path="/mi-consultorio" element={<MiConsultorio />} />}
           {isAdmin && <Route path="/configuracion" element={<Configuracion />} />}
           {isAdmin && <Route path="/usuarios" element={<Usuarios />} />}

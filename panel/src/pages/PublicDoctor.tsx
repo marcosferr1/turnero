@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Calendar, Clock, MapPin, MessageCircle, Moon, Stethoscope, Sun } from 'lucide-react'
+import { Calendar, ChevronDown, Clock, MapPin, MessageCircle, Moon, Stethoscope, Sun } from 'lucide-react'
 import { publicApi } from '../api'
 import { formatLong, formatShort } from '../lib'
 import { useTheme } from '../theme'
@@ -30,6 +30,7 @@ interface PublicLocation {
   address: string
   notes: string | null
   isHomeVisit?: boolean
+  isVirtualVisit?: boolean
   schedules: PublicSchedule[]
   availability: DaySummary[]
 }
@@ -141,9 +142,11 @@ export default function PublicDoctor() {
                     <div>
                       <p className="font-medium">{location.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {location.isHomeVisit
-                          ? 'Atención en el domicilio del paciente'
-                          : location.address}
+                        {location.isVirtualVisit
+                          ? 'Consulta virtual por videollamada (Meet)'
+                          : location.isHomeVisit
+                            ? 'Atención en el domicilio del paciente'
+                            : location.address}
                       </p>
                       {location.notes && (
                         <p className="mt-1 text-xs text-muted-foreground">{location.notes}</p>
@@ -183,23 +186,34 @@ export default function PublicDoctor() {
                         No hay horarios libres en las próximas semanas.
                       </p>
                     ) : (
-                      <div className="space-y-3">
-                        {location.availability.map((day) => (
-                          <div key={day.date} className="rounded-lg border p-3">
-                            <p className="mb-2 text-sm font-medium">
-                              {formatShort(day.date)}{' '}
-                              <span className="font-normal text-muted-foreground">
-                                ({formatLong(day.date)})
+                      <div className="space-y-2">
+                        {location.availability.map((day, index) => (
+                          <details
+                            key={day.date}
+                            open={index === 0}
+                            className="group rounded-lg border"
+                          >
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                              <span>
+                                {formatShort(day.date)}{' '}
+                                <span className="font-normal text-muted-foreground">
+                                  ({formatLong(day.date)})
+                                </span>
                               </span>
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
+                              <span className="flex shrink-0 items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                                {day.slots.length}{' '}
+                                {day.slots.length === 1 ? 'horario' : 'horarios'}
+                                <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                              </span>
+                            </summary>
+                            <div className="flex flex-wrap gap-1.5 border-t px-3 py-2.5">
                               {day.slots.map((t) => (
                                 <Badge key={t} variant="secondary" className="font-normal">
                                   {t} hs
                                 </Badge>
                               ))}
                             </div>
-                          </div>
+                          </details>
                         ))}
                       </div>
                     )}

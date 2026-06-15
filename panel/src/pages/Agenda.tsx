@@ -127,7 +127,11 @@ export default function Agenda() {
                       <div className="text-[13px] font-bold">{a.time} hs</div>
                       <div className="truncate">{a.patient.fullName || a.patient.phone}</div>
                       <div className="truncate text-muted-foreground">
-                        {a.location.isHomeVisit ? 'A domicilio' : a.location.name}
+                        {a.location.isVirtualVisit
+                          ? 'Virtual'
+                          : a.location.isHomeVisit
+                            ? 'A domicilio'
+                            : a.location.name}
                       </div>
                       {!isDoctor && <div className="truncate text-muted-foreground">{a.doctor.name}</div>}
                     </button>
@@ -198,18 +202,24 @@ function DetailModal({
   const rows: [string, string][] = [
     ['Paciente', a.patient.fullName || '—'],
     ['Teléfono', a.patient.phone],
+    ['Email', a.patient.email || '—'],
     ['DNI', a.patient.dni || '—'],
     ['Obra social', a.patient.insurance || '—'],
     ['Motivo', a.motivo || '—'],
     ['Profesional', a.doctor.name],
     [
-      a.location.isHomeVisit ? 'Modalidad' : 'Sede',
-      a.location.isHomeVisit
-        ? 'Visita a domicilio'
-        : `${a.location.name} — ${a.location.address}`,
+      a.location.isVirtualVisit || a.location.isHomeVisit ? 'Modalidad' : 'Sede',
+      a.location.isVirtualVisit
+        ? 'Consulta virtual (Meet por Gmail)'
+        : a.location.isHomeVisit
+          ? 'Visita a domicilio'
+          : `${a.location.name} — ${a.location.address}`,
     ],
     ...(a.location.isHomeVisit
       ? ([['Dirección del paciente', a.patientAddress || '—']] as [string, string][])
+      : []),
+    ...(a.location.isVirtualVisit && !a.patient.email
+      ? ([['Aviso', 'Sin email cargado — necesario para enviar el Meet']] as [string, string][])
       : []),
     ['Origen', a.createdVia === 'bot' ? 'WhatsApp' : 'Panel'],
   ]
@@ -349,6 +359,7 @@ function NewAppointmentModal({
     insurance: '',
     motivo: '',
     patientAddress: '',
+    email: '',
   })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -356,6 +367,7 @@ function NewAppointmentModal({
   const doctorLocations = locations.filter((l) => l.active && l.doctorId === form.doctorId)
   const selectedLocation = doctorLocations.find((l) => l.id === form.locationId)
   const isHomeVisit = Boolean(selectedLocation?.isHomeVisit)
+  const isVirtualVisit = Boolean(selectedLocation?.isVirtualVisit)
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     const resetsTime = key === 'date' || key === 'doctorId' || key === 'locationId'
@@ -366,7 +378,10 @@ function NewAppointmentModal({
           locations.find((l) => l.active && l.doctorId === (value as number))?.id || 0
         next.patientAddress = ''
       }
-      if (key === 'locationId') next.patientAddress = ''
+      if (key === 'locationId') {
+        next.patientAddress = ''
+        next.email = ''
+      }
       return next
     })
   }
@@ -420,7 +435,7 @@ function NewAppointmentModal({
                 {doctorLocations.map((l) => (
                   <SelectItem key={l.id} value={String(l.id)}>
                     {l.name}
-                    {l.isHomeVisit ? ' (domicilio)' : ''}
+                    {l.isVirtualVisit ? ' (virtual)' : l.isHomeVisit ? ' (domicilio)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -457,6 +472,15 @@ function NewAppointmentModal({
             <Label>Obra social</Label>
             <Input value={form.insurance} onChange={(e) => set('insurance', e.target.value)} />
           </div>
+          <div className="grid gap-2">
+            <Label>Email {isVirtualVisit ? '(obligatorio)' : '(opcional)'}</Label>
+            <Input
+              type="email"
+              value={form.email}
+              placeholder="nombre@gmail.com"
+              onChange={(e) => set('email', e.target.value)}
+            />
+          </div>
           <div className="col-span-2 grid gap-2">
             <Label>Motivo</Label>
             <Input value={form.motivo} onChange={(e) => set('motivo', e.target.value)} />
@@ -483,7 +507,8 @@ function NewAppointmentModal({
               !form.time ||
               !form.phone ||
               !form.fullName ||
-              (isHomeVisit && !form.patientAddress.trim())
+              (isHomeVisit && !form.patientAddress.trim()) ||
+              (isVirtualVisit && !form.email.trim())
             }
             onClick={submit}
           >

@@ -1,13 +1,19 @@
 import { Request, Router } from "express";
+import { AppointmentActor } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { scopedDoctorId } from "../middleware/auth";
 import * as svc from "../services/appointments";
 import { AppError } from "../services/appointments";
+import { listAppointmentEvents } from "../services/appointmentEvents";
 
 export const appointmentsRouter = Router();
 
 const FULL_INCLUDE = { doctor: true, location: true, patient: true } as const;
+
+function panelEventCtx(req: Request) {
+  return { actor: "PANEL" as AppointmentActor, userId: req.user?.id };
+}
 
 /** Verifica que el turno exista y, si el usuario es DOCTOR, que sea suyo. */
 async function assertOwnership(req: Request, id: number): Promise<void> {
@@ -45,11 +51,18 @@ appointmentsRouter.get("/pending", async (req, res) => {
   res.json(appointments);
 });
 
+appointmentsRouter.get("/events", async (req, res) => {
+  const scope = scopedDoctorId(req);
+  const rawLimit = parseInt(String(req.query.limit ?? "50"), 10);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 50;
+  res.json(await listAppointmentEvents(scope, limit));
+});
+
 appointmentsRouter.post("/", async (req, res) => {
   try {
     const scope = scopedDoctorId(req);
     const input = scope ? { ...req.body, doctorId: scope } : req.body;
-    const a = await svc.createManual(input);
+    const a = await svc.createManual(input, panelEventCtx(req));
     res.status(201).json(a);
   } catch (err) {
     handleError(err, res);
@@ -60,7 +73,7 @@ appointmentsRouter.post("/:id/approve", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     await assertOwnership(req, id);
-    res.json(await svc.approve(id));
+    res.json(await svc.approve(id, panelEventCtx(req)));
   } catch (err) {
     handleError(err, res);
   }
@@ -70,7 +83,7 @@ appointmentsRouter.post("/:id/reject", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     await assertOwnership(req, id);
-    res.json(await svc.reject(id));
+    res.json(await svc.reject(id, panelEventCtx(req)));
   } catch (err) {
     handleError(err, res);
   }
@@ -80,7 +93,7 @@ appointmentsRouter.post("/:id/cancel", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     await assertOwnership(req, id);
-    res.json(await svc.cancelByDoctor(id));
+    res.json(await svc.cancelByDoctor(id, panelEventCtx(req)));
   } catch (err) {
     handleError(err, res);
   }
@@ -95,7 +108,7 @@ appointmentsRouter.post("/:id/reschedule", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     await assertOwnership(req, id);
-    res.json(await svc.reschedule(id, date, time, locationId));
+    res.json(await svc.reschedule(id, date, time, locationId, panelEventCtx(req)));
   } catch (err) {
     handleError(err, res);
   }
@@ -105,7 +118,7 @@ appointmentsRouter.post("/:id/complete", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     await assertOwnership(req, id);
-    res.json(await svc.complete(id));
+    res.json(await svc.complete(id, panelEventCtx(req)));
   } catch (err) {
     handleError(err, res);
   }

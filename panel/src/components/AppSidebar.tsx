@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
+  Bell,
   CalendarDays,
   Clock,
   Hourglass,
@@ -90,6 +91,7 @@ export function SidebarContent({
         <NavItem to="/agenda" icon={CalendarDays} label="Agenda" onNavigate={onNavigate} />
         <NavItem to="/disponibilidad" icon={Clock} label="Disponibilidad" onNavigate={onNavigate} />
         <NavItem to="/pacientes" icon={Users} label="Pacientes" onNavigate={onNavigate} />
+        <NavItem to="/actividad" icon={Bell} label="Actividad" onNavigate={onNavigate} />
         {isDoctor && (
           <NavItem to="/mi-consultorio" icon={Stethoscope} label="Mi consultorio" onNavigate={onNavigate} />
         )}
