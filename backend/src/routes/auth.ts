@@ -4,10 +4,11 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../prisma";
 import { config } from "../config";
 import { requireAuth } from "../middleware/auth";
+import { loginRateLimiter } from "../middleware/loginRateLimit";
 
 export const authRouter = Router();
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", loginRateLimiter, async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) {
     res.status(400).json({ error: "Usuario y contraseña requeridos" });

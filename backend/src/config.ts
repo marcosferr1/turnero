@@ -5,9 +5,23 @@ dotenv.config();
 
 export type WhatsAppMode = "simulator" | "cloud" | "twilio" | "baileys";
 
+const isProduction = process.env.NODE_ENV === "production";
+
+function parseCorsOrigins(): string[] {
+  const raw = process.env.CORS_ORIGIN?.trim();
+  if (!raw) return [];
+  return raw.split(",").map((o) => o.trim()).filter(Boolean);
+}
+
 export const config = {
+  isProduction,
   port: parseInt(process.env.PORT || "3001", 10),
   jwtSecret: process.env.JWT_SECRET || "dev-secret",
+  corsOrigins: parseCorsOrigins(),
+  loginRateLimit: {
+    max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || "10", 10),
+    windowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || "900000", 10),
+  },
   utcOffset: process.env.APP_UTC_OFFSET || "-03:00",
   /** URL pública HTTPS del backend (Vercel/Railway). Railway setea RAILWAY_PUBLIC_DOMAIN. */
   publicUrl: (process.env.PUBLIC_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "")).replace(/\/$/, ""),

@@ -377,9 +377,18 @@ async function connect(): Promise<void> {
 
     if (qr) {
       pendingQr = qr;
-      const pairingUrl = baileysQrPairingUrl();
-      if (pairingUrl) {
-        console.log(`[baileys] Escaneá el QR en: ${pairingUrl}`);
+      if (config.isProduction && !config.baileys.qrSecret) {
+        console.error("[baileys] QR generado pero BAILEYS_QR_SECRET no está configurado; /baileys/qr deshabilitado.");
+        return;
+      }
+      if (config.publicUrl && config.baileys.qrSecret) {
+        if (config.isProduction) {
+          console.log("[baileys] Escaneá el QR en /baileys/qr (agregá ?token=BAILEYS_QR_SECRET en la URL)");
+        } else {
+          console.log(`[baileys] Escaneá el QR en: ${baileysQrPairingUrl()}`);
+        }
+      } else if (config.publicUrl) {
+        console.log(`[baileys] Escaneá el QR en: ${config.publicUrl}/baileys/qr`);
       } else {
         logQrForCloud(qr, "[baileys] Escaneá este QR con WhatsApp → Dispositivos vinculados:");
       }

@@ -37,6 +37,16 @@ baileysQrRouter.get("/baileys/qr", async (req, res) => {
     return;
   }
 
+  if (config.isProduction && !config.baileys.qrSecret) {
+    res.status(503).send(
+      pairingPage(
+        "Configuración incompleta",
+        "<p>BAILEYS_QR_SECRET no está configurado en el servidor.</p>",
+      ),
+    );
+    return;
+  }
+
   if (config.baileys.qrSecret && req.query.token !== config.baileys.qrSecret) {
     res.status(401).send(pairingPage("No autorizado", "<p>Token inválido o faltante.</p>"));
     return;
