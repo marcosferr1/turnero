@@ -1,5 +1,4 @@
 import path from "node:path";
-import qrcode from "qrcode-terminal";
 import pino from "pino";
 import makeWASocket, {
   DisconnectReason,
@@ -17,6 +16,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import { config } from "../config";
+import { logQrForCloud } from "../lib/qrTerminal";
 import { normalizeWhatsAppPhone } from "../lib/phoneNormalize";
 import { resolvePendingChoice } from "./pendingChoices";
 import { handlePatientMessage, resolveDoctorForBaileys } from "./dispatch";
@@ -369,8 +369,10 @@ async function connect(): Promise<void> {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log("\n[baileys] Escaneá este QR con WhatsApp → Dispositivos vinculados:\n");
-      qrcode.generate(qr, { small: true });
+      logQrForCloud(
+        qr,
+        "[baileys] Escaneá este QR con WhatsApp → Dispositivos vinculados:"
+      );
     }
 
     if (connection === "open") {
