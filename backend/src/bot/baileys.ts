@@ -17,12 +17,19 @@ import makeWASocket, {
 import { Boom } from "@hapi/boom";
 import { config } from "../config";
 import { logQrForCloud } from "../lib/qrTerminal";
+import { baileysQrPairingUrl } from "../lib/baileysPairingUrl";
 import { normalizeWhatsAppPhone } from "../lib/phoneNormalize";
 import { resolvePendingChoice } from "./pendingChoices";
 import { handlePatientMessage, resolveDoctorForBaileys } from "./dispatch";
 
 let socket: WASocket | null = null;
 let starting = false;
+let pendingQr: string | null = null;
+let baileysConnected = false;
+
+export function getBaileysPairingState(): { qr: string | null; connected: boolean } {
+  return { qr: pendingQr, connected: baileysConnected };
+}
 
 const messageStore = new Map<string, ProtoTypes.IMessage>();
 /** Clave de conversación (teléfono o lid:…) → JID para responder. */
@@ -369,14 +376,19 @@ async function connect(): Promise<void> {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      logQrForCloud(
-        qr,
-        "[baileys] Escaneá este QR con WhatsApp → Dispositivos vinculados:"
-      );
+      pendingQr = qr;
+      const pairingUrl = baileysQrPairingUrl();
+      if (pairingUrl) {
+        console.log(`[baileys] Escaneá el QR en: ${pairingUrl}`);
+      } else {
+        logQrForCloud(qr, "[baileys] Escaneá este QR con WhatsApp → Dispositivos vinculados:");
+      }
     }
 
     if (connection === "open") {
       starting = false;
+      pendingQr = null;
+      baileysConnected = true;
       console.log(`[baileys] Conectado (+${config.baileys.phone}). Listo para recibir mensajes.`);
     }
 
@@ -387,6 +399,8 @@ async function connect(): Promise<void> {
     if (connection === "close") {
       starting = false;
       socket = null;
+      baileysConnected = false;
+      pendingQr = null;
       const code = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
       if (code === DisconnectReason.loggedOut) {
         console.error("[baileys] Sesión cerrada. Ejecutá: rm -rf .baileys_auth && npm run dev");

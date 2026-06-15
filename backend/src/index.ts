@@ -14,6 +14,7 @@ import { webhookRouter } from "./bot/webhook";
 import { twilioWebhookRouter } from "./bot/twilioWebhook";
 import { startBaileys } from "./bot/baileys";
 import { startReminderJob } from "./jobs/reminders";
+import { baileysQrRouter } from "./routes/baileysQr";
 
 const app = express();
 app.use(cors());
@@ -21,6 +22,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.get("/health", (_req, res) => res.json({ ok: true, mode: config.whatsapp.mode }));
+
+// QR Baileys para vincular WhatsApp (sin auth; opcional ?token=)
+app.use(baileysQrRouter);
 
 // Webhook Meta Cloud API (sin auth)
 app.use("/webhook", webhookRouter);

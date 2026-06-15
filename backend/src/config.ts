@@ -9,6 +9,8 @@ export const config = {
   port: parseInt(process.env.PORT || "3001", 10),
   jwtSecret: process.env.JWT_SECRET || "dev-secret",
   utcOffset: process.env.APP_UTC_OFFSET || "-03:00",
+  /** URL pública HTTPS del backend (Vercel/Railway). Railway setea RAILWAY_PUBLIC_DOMAIN. */
+  publicUrl: (process.env.PUBLIC_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "")).replace(/\/$/, ""),
   whatsapp: {
     mode: (process.env.WHATSAPP_MODE || "simulator") as WhatsAppMode,
     token: process.env.WHATSAPP_TOKEN || "",
@@ -32,6 +34,8 @@ export const config = {
     authDir: process.env.BAILEYS_AUTH_DIR || ".baileys_auth",
     /** Intentar menús nativos además del texto numerado (experimental). */
     nativeMenus: process.env.BAILEYS_NATIVE_MENUS === "true",
+    /** Token opcional para proteger GET /baileys/qr (?token=...) */
+    qrSecret: process.env.BAILEYS_QR_SECRET || "",
   },
   email: {
     from: process.env.EMAIL_FROM || "",
