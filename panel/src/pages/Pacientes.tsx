@@ -20,22 +20,35 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Empty, PageHeader, StatusBadge, TableScroll } from '../components/page'
+import { Empty, InlineLoader, PageHeader, PageLoading, StatusBadge, TableScroll } from '../components/page'
 
 export default function Pacientes() {
   const [patients, setPatients] = useState<Patient[]>([])
+  const [loading, setLoading] = useState(true)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Patient | null>(null)
 
   useEffect(() => {
     const t = setTimeout(() => {
-      api.get<Patient[]>(`/api/patients?search=${encodeURIComponent(search)}`).then(setPatients).catch(() => {})
+      setLoading(true)
+      api
+        .get<Patient[]>(`/api/patients?search=${encodeURIComponent(search)}`)
+        .then(setPatients)
+        .catch(() => setPatients([]))
+        .finally(() => setLoading(false))
     }, 250)
     return () => clearTimeout(t)
   }, [search])
 
   function openDetail(id: number) {
-    api.get<Patient>(`/api/patients/${id}`).then(setSelected).catch(() => {})
+    setDetailLoading(true)
+    setSelected({ id } as Patient)
+    api
+      .get<Patient>(`/api/patients/${id}`)
+      .then(setSelected)
+      .catch(() => setSelected(null))
+      .finally(() => setDetailLoading(false))
   }
 
   return (
@@ -58,7 +71,9 @@ export default function Pacientes() {
 
       <Card>
         <CardContent>
-          {patients.length === 0 ? (
+          {loading ? (
+            <PageLoading />
+          ) : patients.length === 0 ? (
             <Empty>No se encontraron pacientes.</Empty>
           ) : (
             <TableScroll>
@@ -99,8 +114,12 @@ export default function Pacientes() {
         <Dialog open onOpenChange={(open) => !open && setSelected(null)}>
           <DialogContent className="max-h-[85dvh] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto sm:w-full" aria-describedby={undefined}>
             <DialogHeader>
-              <DialogTitle>{selected.fullName || selected.phone}</DialogTitle>
+              <DialogTitle>{selected.fullName || selected.phone || 'Paciente'}</DialogTitle>
             </DialogHeader>
+            {detailLoading || !selected.phone ? (
+              <InlineLoader label="Cargando historial…" />
+            ) : (
+            <>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[110px_1fr]">
               <dt className="text-muted-foreground">Teléfono</dt>
               <dd className="font-medium">{selected.phone}</dd>
@@ -135,6 +154,8 @@ export default function Pacientes() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+            </>
             )}
           </DialogContent>
         </Dialog>

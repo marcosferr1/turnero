@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Alert, Empty, PageHeader, TableScroll } from '../components/page'
+import { Alert, Empty, PageHeader, PageLoading, TableScroll } from '../components/page'
 import { useConfirm } from '../components/ConfirmProvider'
 
 export default function Disponibilidad() {
@@ -35,6 +35,7 @@ export default function Disponibilidad() {
   const [doctorId, setDoctorId] = useState(isDoctor ? user!.doctorId || 0 : 0)
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [blocks, setBlocks] = useState<Block[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const [schedForm, setSchedForm] = useState({ locationId: 0, weekday: 1, startTime: '09:00', endTime: '13:00', slotMinutes: 30 })
@@ -61,9 +62,23 @@ export default function Disponibilidad() {
   }, [doctorId, allLocations])
 
   const load = useCallback(() => {
-    if (!doctorId) return
-    api.get<Schedule[]>(`/api/schedules?doctorId=${doctorId}`).then(setSchedules).catch((e) => setError(e.message))
-    api.get<Block[]>(`/api/blocks?doctorId=${doctorId}`).then(setBlocks).catch(() => {})
+    if (!doctorId) {
+      setSchedules([])
+      setBlocks([])
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    Promise.all([
+      api.get<Schedule[]>(`/api/schedules?doctorId=${doctorId}`),
+      api.get<Block[]>(`/api/blocks?doctorId=${doctorId}`),
+    ])
+      .then(([s, b]) => {
+        setSchedules(s)
+        setBlocks(b)
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Error'))
+      .finally(() => setLoading(false))
   }, [doctorId])
 
   useEffect(load, [load])
@@ -113,6 +128,10 @@ export default function Disponibilidad() {
       />
       {error && <Alert kind="error">{error}</Alert>}
 
+      {loading ? (
+        <PageLoading />
+      ) : (
+      <>
       <Card className="mb-5">
         <CardHeader>
           <CardTitle>Horarios semanales</CardTitle>
@@ -315,6 +334,8 @@ export default function Disponibilidad() {
           </Button>
         </CardContent>
       </Card>
+      </>
+      )}
     </>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { InlineLoader } from './page'
 
 interface Props {
   doctorId: number
@@ -24,7 +25,7 @@ export default function SlotPicker({ doctorId, locationId, date, value, onChange
 
   if (!doctorId || !locationId || !date)
     return <p className="text-sm text-muted-foreground">Elegí doctor, sede y fecha.</p>
-  if (slots === null) return <p className="text-sm text-muted-foreground">Cargando horarios…</p>
+  if (slots === null) return <InlineLoader label="Cargando horarios…" />
   if (slots.length === 0)
     return <p className="text-sm text-muted-foreground">No hay horarios libres ese día.</p>
 

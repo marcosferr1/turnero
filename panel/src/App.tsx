@@ -18,6 +18,7 @@ import MiConsultorio from './pages/MiConsultorio'
 import Usuarios from './pages/Usuarios'
 import PublicDoctor from './pages/PublicDoctor'
 import type { Appointment } from './types'
+import { PageLoading } from './components/page'
 
 export default function App() {
   const { user, loading, logout } = useAuth()
@@ -38,7 +39,7 @@ export default function App() {
     setMenuOpen(false)
   }, [location.pathname])
 
-  if (loading) return null
+  if (loading) return <PageLoading label="Verificando sesión…" />
 
   if (location.pathname.startsWith('/d/')) {
     return (

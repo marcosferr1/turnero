@@ -1,3 +1,5 @@
+import { trackGet } from './lib/getLoading'
+
 const TOKEN_KEY = 'turnero_token'
 
 /** Vacío en local: Vite proxyea /api → backend. En Vercel/Railway: URL pública del backend. */
@@ -41,7 +43,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
+  get: <T>(path: string) => trackGet(request<T>(path)),
   post: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: 'POST', body: data ? JSON.stringify(data) : undefined }),
   put: <T>(path: string, data: unknown) =>
@@ -51,10 +53,13 @@ export const api = {
 
 /** Peticiones públicas (sin token, sin redirección a login). */
 export const publicApi = {
-  get: async <T>(path: string): Promise<T> => {
-    const res = await fetch(apiUrl(path), { headers: { 'Content-Type': 'application/json' } })
-    const body = await res.json().catch(() => ({}))
-    if (!res.ok) throw new ApiError(res.status, body.error || 'Error en la solicitud')
-    return body as T
-  },
+  get: async <T>(path: string): Promise<T> =>
+    trackGet(
+      (async () => {
+        const res = await fetch(apiUrl(path), { headers: { 'Content-Type': 'application/json' } })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new ApiError(res.status, body.error || 'Error en la solicitud')
+        return body as T
+      })(),
+    ),
 }

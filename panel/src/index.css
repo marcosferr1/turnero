@@ -197,3 +197,16 @@
     background: var(--scrollbar-sidebar-track);
   }
 }
+
+@keyframes loader-bar-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.loader-bar {
+  animation: loader-bar-slide 1s ease-in-out infinite;
+}

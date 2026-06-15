@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ActiveBadge, Alert, PageHeader, TableScroll } from '../components/page'
+import { ActiveBadge, Alert, PageHeader, PageLoading, TableScroll } from '../components/page'
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Administrador',
@@ -24,13 +24,19 @@ const ROLE_LABEL: Record<string, string> = {
 
 export default function Usuarios() {
   const [users, setUsers] = useState<PanelUser[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
   const [form, setForm] = useState({ name: '', specialty: '', username: '', password: '' })
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
-    api.get<PanelUser[]>('/api/users').then(setUsers).catch((e) => setError(e.message))
+    setLoading(true)
+    api
+      .get<PanelUser[]>('/api/users')
+      .then(setUsers)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
   }, [])
   useEffect(load, [load])
 
@@ -88,6 +94,9 @@ export default function Usuarios() {
           <CardTitle>Cuentas existentes</CardTitle>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <PageLoading />
+          ) : (
           <TableScroll>
             <Table>
               <TableHeader>
@@ -130,6 +139,7 @@ export default function Usuarios() {
               </TableBody>
             </Table>
           </TableScroll>
+          )}
         </CardContent>
       </Card>
 

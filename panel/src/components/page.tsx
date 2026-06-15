@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { STATUS_LABEL, type AppointmentStatus } from '../types'
 
@@ -42,6 +43,24 @@ export function Alert({ kind, children }: { kind: 'error' | 'ok'; children: Reac
 
 export function Empty({ children }: { children: ReactNode }) {
   return <div className="py-10 text-center text-sm text-muted-foreground">{children}</div>
+}
+
+export function PageLoading({ label = 'Cargando…' }: { label?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-muted-foreground">
+      <Loader2 className="size-8 animate-spin text-primary" aria-hidden />
+      <span>{label}</span>
+    </div>
+  )
+}
+
+export function InlineLoader({ label = 'Cargando…' }: { label?: string }) {
+  return (
+    <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+      <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+      <span>{label}</span>
+    </div>
+  )
 }
 
 /** Contenedor con scroll horizontal temático para tablas en pantallas chicas. */

@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { ActiveBadge, Alert, PageHeader, TableScroll } from '../components/page'
+import { ActiveBadge, Alert, PageHeader, PageLoading, TableScroll } from '../components/page'
 import { useConfirm } from '../components/ConfirmProvider'
 
 export default function Configuracion() {
@@ -55,19 +55,22 @@ export default function Configuracion() {
 function Sedes() {
   const [items, setItems] = useState<Location[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ name: '', address: '', notes: '', doctorId: 0 })
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
-    api.get<Location[]>('/api/locations').then(setItems).catch(() => {})
+    setLoading(true)
+    Promise.all([api.get<Location[]>('/api/locations'), api.get<Doctor[]>('/api/doctors')])
+      .then(([locs, ds]) => {
+        setItems(locs)
+        setDoctors(ds)
+        if (ds.length > 0) setForm((f) => ({ ...f, doctorId: f.doctorId || ds[0].id }))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
   useEffect(load, [load])
-  useEffect(() => {
-    api.get<Doctor[]>('/api/doctors').then((ds) => {
-      setDoctors(ds)
-      if (ds.length > 0) setForm((f) => ({ ...f, doctorId: f.doctorId || ds[0].id }))
-    })
-  }, [])
 
   async function add() {
     setError('')
@@ -87,6 +90,10 @@ function Sedes() {
       </CardHeader>
       <CardContent>
         {error && <Alert kind="error">{error}</Alert>}
+        {loading ? (
+          <PageLoading />
+        ) : (
+        <>
         <TableScroll>
           <Table>
             <TableHeader>
@@ -156,6 +163,8 @@ function Sedes() {
           <Plus className="size-4" />
           Agregar sede
         </Button>
+        </>
+        )}
       </CardContent>
     </Card>
   )
@@ -168,20 +177,30 @@ function Info() {
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [doctorId, setDoctorId] = useState(0)
   const [items, setItems] = useState<InfoContent[]>([])
+  const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<InfoContent | null>(null)
   const [form, setForm] = useState({ title: '', body: '' })
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api.get<Doctor[]>('/api/doctors').then((ds) => {
-      setDoctors(ds)
-      if (ds.length > 0) setDoctorId(ds[0].id)
-    })
+    setLoading(true)
+    api
+      .get<Doctor[]>('/api/doctors')
+      .then((ds) => {
+        setDoctors(ds)
+        if (ds.length > 0) setDoctorId(ds[0].id)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const load = useCallback(() => {
     if (!doctorId) return
-    api.get<InfoContent[]>(`/api/info?doctorId=${doctorId}`).then(setItems).catch(() => {})
+    setLoading(true)
+    api
+      .get<InfoContent[]>(`/api/info?doctorId=${doctorId}`)
+      .then(setItems)
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false))
   }, [doctorId])
   useEffect(load, [load])
 
@@ -218,6 +237,10 @@ function Info() {
       </CardHeader>
       <CardContent>
         {error && <Alert kind="error">{error}</Alert>}
+        {loading ? (
+          <PageLoading />
+        ) : (
+        <>
         <TableScroll>
           <Table>
             <TableHeader>
@@ -292,6 +315,8 @@ function Info() {
             </Button>
           )}
         </div>
+        </>
+        )}
       </CardContent>
     </Card>
   )
@@ -301,10 +326,16 @@ function Info() {
 
 function Doctores() {
   const [items, setItems] = useState<Doctor[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
-    api.get<Doctor[]>('/api/doctors').then(setItems).catch(() => {})
+    setLoading(true)
+    api
+      .get<Doctor[]>('/api/doctors')
+      .then(setItems)
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
   useEffect(load, [load])
 
@@ -315,6 +346,10 @@ function Doctores() {
       </CardHeader>
       <CardContent>
         {error && <Alert kind="error">{error}</Alert>}
+        {loading ? (
+          <PageLoading />
+        ) : (
+        <>
         <TableScroll>
           <Table>
             <TableHeader>
@@ -368,6 +403,8 @@ function Doctores() {
         <p className="mt-4 text-sm text-muted-foreground">
           Para dar de alta una nueva doctora con su cuenta del panel, usá la sección <strong>Usuarios</strong>.
         </p>
+        </>
+        )}
       </CardContent>
     </Card>
   )

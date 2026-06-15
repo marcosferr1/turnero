@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ActiveBadge, Alert, Empty, PageHeader, TableScroll } from '../components/page'
+import { ActiveBadge, Alert, Empty, InlineLoader, PageHeader, TableScroll } from '../components/page'
 
 export default function MiConsultorio() {
   return (
@@ -38,14 +38,19 @@ export default function MiConsultorio() {
 function Perfil() {
   const { user } = useAuth()
   const [form, setForm] = useState({ name: '', specialty: '' })
+  const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api.get<Doctor[]>('/api/doctors').then((ds) => {
-      const me = ds.find((d) => d.id === user?.doctorId)
-      if (me) setForm({ name: me.name, specialty: me.specialty })
-    })
+    setLoading(true)
+    api
+      .get<Doctor[]>('/api/doctors')
+      .then((ds) => {
+        const me = ds.find((d) => d.id === user?.doctorId)
+        if (me) setForm({ name: me.name, specialty: me.specialty })
+      })
+      .finally(() => setLoading(false))
   }, [user])
 
   async function save() {
@@ -67,6 +72,10 @@ function Perfil() {
       <CardContent>
         {error && <Alert kind="error">{error}</Alert>}
         {msg && <Alert kind="ok">{msg}</Alert>}
+        {loading ? (
+          <InlineLoader />
+        ) : (
+        <>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label>Nombre y apellido</Label>
@@ -80,6 +89,8 @@ function Perfil() {
         <Button className="mt-4" onClick={save} disabled={!form.name || !form.specialty}>
           Guardar datos
         </Button>
+        </>
+        )}
       </CardContent>
     </Card>
   )
@@ -90,19 +101,24 @@ function Perfil() {
 function WhatsApp() {
   const { user } = useAuth()
   const [form, setForm] = useState({ whatsappPhoneNumberId: '', whatsappDisplayPhone: '' })
+  const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api.get<Doctor[]>('/api/doctors').then((ds) => {
-      const me = ds.find((d) => d.id === user?.doctorId)
-      if (me) {
-        setForm({
-          whatsappPhoneNumberId: me.whatsappPhoneNumberId || '',
-          whatsappDisplayPhone: me.whatsappDisplayPhone || '',
-        })
-      }
-    })
+    setLoading(true)
+    api
+      .get<Doctor[]>('/api/doctors')
+      .then((ds) => {
+        const me = ds.find((d) => d.id === user?.doctorId)
+        if (me) {
+          setForm({
+            whatsappPhoneNumberId: me.whatsappPhoneNumberId || '',
+            whatsappDisplayPhone: me.whatsappDisplayPhone || '',
+          })
+        }
+      })
+      .finally(() => setLoading(false))
   }, [user])
 
   async function save() {
@@ -130,6 +146,10 @@ function WhatsApp() {
       <CardContent>
         {error && <Alert kind="error">{error}</Alert>}
         {msg && <Alert kind="ok">{msg}</Alert>}
+        {loading ? (
+          <InlineLoader />
+        ) : (
+        <>
         <p className="mb-4 text-sm text-muted-foreground">
           Número de WhatsApp del consultorio. Con Twilio: en <strong>ID emisor</strong> va el número
           de Twilio (sandbox +14155238886 o tu sender aprobado); en <strong>número visible</strong> va
@@ -172,6 +192,8 @@ function WhatsApp() {
             </a>
           </p>
         )}
+        </>
+        )}
       </CardContent>
     </Card>
   )
@@ -181,11 +203,17 @@ function WhatsApp() {
 
 function MisSedes() {
   const [items, setItems] = useState<Location[]>([])
+  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ name: '', address: '', notes: '' })
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
-    api.get<Location[]>('/api/locations').then(setItems).catch(() => {})
+    setLoading(true)
+    api
+      .get<Location[]>('/api/locations')
+      .then(setItems)
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
   useEffect(load, [load])
 
@@ -207,7 +235,9 @@ function MisSedes() {
       </CardHeader>
       <CardContent>
         {error && <Alert kind="error">{error}</Alert>}
-        {items.length === 0 ? (
+        {loading ? (
+          <InlineLoader />
+        ) : items.length === 0 ? (
           <Empty>Todavía no cargaste ninguna sede. Agregá la primera acá abajo.</Empty>
         ) : (
           <TableScroll>

@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Alert, PageHeader, StatusBadge } from '../components/page'
+import { Alert, PageHeader, PageLoading, StatusBadge } from '../components/page'
 import { useConfirm } from '../components/ConfirmProvider'
 
 const CARD_STATUS_CLASS: Record<string, string> = {
@@ -37,6 +37,7 @@ export default function Agenda() {
   const isDoctor = user?.role === 'DOCTOR'
   const [monday, setMonday] = useState(() => mondayOf(todayStr()))
   const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [locations, setLocations] = useState<Location[]>([])
   const [selected, setSelected] = useState<Appointment | null>(null)
@@ -47,10 +48,12 @@ export default function Agenda() {
   const days = Array.from({ length: 6 }, (_, i) => addDays(monday, i))
 
   const load = useCallback(() => {
+    setLoading(true)
     api
       .get<Appointment[]>(`/api/appointments?from=${monday}&to=${weekEnd}`)
       .then(setAppointments)
       .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
   }, [monday, weekEnd])
 
   useEffect(load, [load])
@@ -90,6 +93,9 @@ export default function Agenda() {
       />
       {error && <Alert kind="error">{error}</Alert>}
 
+      {loading ? (
+        <PageLoading />
+      ) : (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         {days.map((date) => {
           const isToday = date === todayStr()
@@ -129,6 +135,7 @@ export default function Agenda() {
           )
         })}
       </div>
+      )}
 
       {selected && (
         <DetailModal

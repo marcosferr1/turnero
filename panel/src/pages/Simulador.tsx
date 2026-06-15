@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Alert, PageHeader } from '../components/page'
+import { Alert, PageHeader, PageLoading } from '../components/page'
 
 interface ChatMessage {
   from: 'user' | 'bot'
@@ -23,6 +23,7 @@ interface ChatMessage {
 
 export default function Simulador() {
   const [doctors, setDoctors] = useState<SimDoctor[]>([])
+  const [doctorsLoading, setDoctorsLoading] = useState(true)
   const [doctorId, setDoctorId] = useState(0)
   const [phone, setPhone] = useState('549261000999')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -32,10 +33,14 @@ export default function Simulador() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    api.get<SimDoctor[]>('/api/simulator/doctors').then((ds) => {
-      setDoctors(ds)
-      if (ds.length > 0) setDoctorId(ds[0].id)
-    })
+    setDoctorsLoading(true)
+    api
+      .get<SimDoctor[]>('/api/simulator/doctors')
+      .then((ds) => {
+        setDoctors(ds)
+        if (ds.length > 0) setDoctorId(ds[0].id)
+      })
+      .finally(() => setDoctorsLoading(false))
   }, [])
 
   useEffect(() => {
@@ -110,6 +115,9 @@ export default function Simulador() {
       />
       {error && <Alert kind="error">{error}</Alert>}
 
+      {doctorsLoading ? (
+        <PageLoading label="Cargando profesionales…" />
+      ) : (
       <div className="flex h-[min(70dvh,calc(100dvh-12rem))] w-full max-w-xl flex-col overflow-hidden rounded-xl border bg-muted/40">
         <div className="flex flex-wrap items-center gap-3 border-b bg-card px-4 py-3">
           <div className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -186,6 +194,7 @@ export default function Simulador() {
           </Button>
         </div>
       </div>
+      )}
     </>
   )
 }

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { PageLoading } from '../components/page'
 
 interface PublicSchedule {
   weekday: number
@@ -85,13 +86,7 @@ export default function PublicDoctor() {
       </header>
 
       <main className="mx-auto max-w-lg px-4 pb-10">
-        {loading && (
-          <Card>
-            <CardContent className="py-12 text-center text-sm text-muted-foreground">
-              Cargando…
-            </CardContent>
-          </Card>
-        )}
+        {loading && <PageLoading label="Cargando perfil…" />}
 
         {!loading && error && (
           <Card>

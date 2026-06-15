@@ -14,17 +14,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Alert, Empty, PageHeader, TableScroll } from '../components/page'
+import { Alert, Empty, PageHeader, PageLoading, TableScroll } from '../components/page'
 
 export default function Pendientes() {
   const { user } = useAuth()
   const isDoctor = user?.role === 'DOCTOR'
   const [items, setItems] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
 
   const load = useCallback(() => {
-    api.get<Appointment[]>('/api/appointments/pending').then(setItems).catch((e) => setError(e.message))
+    setLoading(true)
+    api
+      .get<Appointment[]>('/api/appointments/pending')
+      .then(setItems)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
   }, [])
 
   useEffect(load, [load])
@@ -51,7 +57,9 @@ export default function Pendientes() {
       {error && <Alert kind="error">{error}</Alert>}
       <Card>
         <CardContent className="pt-6">
-          {items.length === 0 ? (
+          {loading ? (
+            <PageLoading />
+          ) : items.length === 0 ? (
             <Empty>No hay solicitudes pendientes.</Empty>
           ) : (
             <>
